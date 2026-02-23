@@ -8,10 +8,15 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(Protobuf CONFIG REQUIRED)
 find_package(gRPC CONFIG REQUIRED)
 
-add_executable(sentinel_engine src/main.cpp)
+add_executable(sentinel_engine
+        src/main.cpp
+        pb/proto/sentinel.pb.cc
+        pb/proto/sentinel.grpc.pb.cc
+)
 
 target_include_directories(sentinel_engine PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/pb
 )
 
 target_link_libraries(sentinel_engine PRIVATE
