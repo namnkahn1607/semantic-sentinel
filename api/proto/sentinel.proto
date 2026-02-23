@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "sentinel/gateway/pb";
+
+service SemanticService {
+  rpc CheckCache (CheckCacheRequest) returns (CheckCacheResponse);
+}
+
+message CheckCacheRequest {
+  string prompt_text = 1;
+}
+
+message CheckCacheResponse {
+  bool is_hit = 1;
+  string cached_payload = 2;
+  float similarity_score = 3;
+}
