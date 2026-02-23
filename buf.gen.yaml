@@ -1,0 +1,18 @@
+version: v2
+plugins:
+  # Automatically pull Go's gRPC plugins from Buf's server
+  - remote: buf.build/protocolbuffers/go
+    out: gateway/pb
+    opt: paths=source_relative
+  - remote: buf.build/grpc/go
+    out: gateway/pb
+    opt: paths=source_relative
+
+  # Compile C++ Vector Engine's code
+  - remote: buf.build/protocolbuffers/cpp
+    out: engine/pb
+  
+  # gRPC C++ Plugin
+  - local:
+      - engine/build/vcpkg_installed/x64-linux/tools/grpc/grpc_cpp_plugin
+    out: engine/pb
