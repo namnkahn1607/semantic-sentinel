@@ -9,10 +9,10 @@ plugins:
     opt: paths=source_relative
 
   # Compile C++ Vector Engine's code
-  - remote: buf.build/protocolbuffers/cpp
-    out: engine/pb
+  # - remote: buf.build/protocolbuffers/cpp
+  #   out: engine/pb
   
   # gRPC C++ Plugin
-  - local:
-      - engine/build/vcpkg_installed/x64-linux/tools/grpc/grpc_cpp_plugin
-    out: engine/pb
+  # - local:
+  #     - engine/build/vcpkg_installed/x64-linux/tools/grpc/grpc_cpp_plugin
+  #   out: engine/pb
