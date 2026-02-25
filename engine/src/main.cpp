@@ -18,6 +18,27 @@ public:
     };
 };
 
+void RunServer() {
+    const std::string server_address = "unix:///tmp/sentinel.sock";
+    SemanticServiceImpl service;
+
+    grpc::ServerBuilder builder;
+    builder.AddListeningPort(
+        server_address,
+        grpc::InsecureServerCredentials());  // no TLS encryption
+    builder.RegisterService(&service);
+
+    // Force Linux creating a physical file (socket) at server_address
+    // and bind() C++ process to it.
+    const std::unique_ptr server(builder.BuildAndStart());
+
+    // A daemon (background) process is not allowed to end main().
+    // Call Wait() to lock main thread, releasing CPU for gRPC workers to
+    // work on data traveling through the socket.
+    server->Wait();
+}
+
 int main() {
+    RunServer();
     return 0;
 }
