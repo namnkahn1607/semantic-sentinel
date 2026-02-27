@@ -3,9 +3,14 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	pb "gateway/pb/proto"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"google.golang.org/grpc"
@@ -29,10 +34,11 @@ const (
 	// We haven't attached Semantic Engine, so now latency only relies
 	// on Context Switch and Network I/O.
 	// TODO: After attaching Semantic Engine, change serviceTimeout to 30ms.
-	serviceTimeout = 2 * time.Millisecond
-	warmupTimeout  = 50 * time.Millisecond
-	endpoint       = "/v1/cache/check"
-	serverPort     = ":8080"
+	serviceTimeout        = 2 * time.Millisecond
+	warmupTimeout         = 50 * time.Millisecond
+	serverShutdownTimeout = 5 * time.Second
+	endpoint              = "/v1/cache/check"
+	serverPort            = ":8080"
 )
 
 // HTTP Handler
@@ -100,6 +106,8 @@ func run() error {
 	defer func() {
 		if connCloseErr := conn.Close(); connCloseErr != nil {
 			log.Printf("Connection close Error: %v\n", connCloseErr)
+		} else {
+			log.Printf("Closed UDS Connection.")
 		}
 	}()
 
@@ -117,16 +125,47 @@ func run() error {
 
 	log.Println("Warmup completed.")
 
-	// 4. Create ServeMux (Router) - register endpoint to action function
+	// 4. Create ServeMux (Router) - register endpoint to handler function
 	mux := http.NewServeMux()
 	mux.HandleFunc(endpoint, handleCheckCache(clientStub))
 
-	// 5. Open HTTP Server at port 8080 listening for requests
-	log.Printf("Gateway listening on %s...\n", serverPort)
-	if portErr := http.ListenAndServe(serverPort, mux); portErr != nil {
-		return portErr
+	// 5. Create Server instance (with address and handler function)
+	server := &http.Server{
+		Addr:    serverPort,
+		Handler: mux,
 	}
 
+	// 6. OS signal channel
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt /* SIGINT */, syscall.SIGTERM)
+
+	// 7. HTTP Server error channel
+	serverErrChan := make(chan error, 1)
+	go func() {
+		log.Printf("Gateway listening on %s...\n", serverPort)
+		if serverErr := server.ListenAndServe(); serverErr != nil && !errors.Is(serverErr, http.ErrServerClosed) {
+			serverErrChan <- serverErr
+		}
+	}()
+
+	// 8. Catch ONLY the first item into one of the channels
+	select {
+	case err := <-serverErrChan:
+		return fmt.Errorf("HTTP Server crashed %w", err)
+	case sig := <-sigChan:
+		log.Printf("Received signal: %v. Initiating graceful shutdown...\n", sig)
+	}
+
+	// 9. Create context timeout - the Server waits for remaining goroutines to finish
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), serverShutdownTimeout)
+	defer shutdownCancel()
+
+	// 10. Perform Server graceful shutdown
+	if shutdownErr := server.Shutdown(shutdownCtx); shutdownErr != nil {
+		return fmt.Errorf("HTTP Server shutdown failed: %w", shutdownErr)
+	}
+
+	log.Printf("HTTP Server stopped.")
 	return nil
 }
 
