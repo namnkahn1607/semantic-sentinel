@@ -14,6 +14,8 @@ public:
             response->set_is_hit(false);
         }
 
+        response->set_similarity_score(response->is_hit() ? 1.0 : 0.0);
+
         return grpc::Status::OK;
     };
 };
