@@ -90,20 +90,20 @@ func handleCheckCache(stub pb.SemanticServiceClient) http.HandlerFunc {
 	}
 }
 
-func main() {
+func run() error {
 	// 1. Setup ONLY ONE connection using grpc.NewClient() (no TLS encryption)
 	conn, connErr := grpc.NewClient(socketAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if connErr != nil {
-		log.Fatalf("cannot connect to %s\n", socketAddress)
+		return connErr
 	}
 
 	defer func() {
 		if connCloseErr := conn.Close(); connCloseErr != nil {
-			log.Print("cannot close connection\n")
+			log.Printf("Connection close Error: %v\n", connCloseErr)
 		}
 	}()
 
-	// 2. Create ONLY ONE Client (Server's stub) using NewSemanticServiceClient()
+	// 2. Create ONLY ONE Client (Server's stub)
 	clientStub := pb.NewSemanticServiceClient(conn)
 
 	// 3. Warmup routine against gRPC's Lazy Connection
@@ -112,7 +112,7 @@ func main() {
 	warmupCtx, warmupCancel := context.WithTimeout(context.Background(), warmupTimeout)
 	defer warmupCancel()
 	if _, warmupErr := clientStub.CheckCache(warmupCtx, &pb.CheckCacheRequest{PromptText: "warmup_signal"}); warmupErr != nil {
-		log.Fatalf("C++ Engine is not responding or UDS is broken: %v\n", warmupErr)
+		return warmupErr
 	}
 
 	log.Println("Warmup completed.")
@@ -124,6 +124,14 @@ func main() {
 	// 5. Open HTTP Server at port 8080 listening for requests
 	log.Printf("Gateway listening on %s...\n", serverPort)
 	if portErr := http.ListenAndServe(serverPort, mux); portErr != nil {
-		log.Fatalf("Failed to start HTTP Server: %v\n", portErr)
+		return portErr
+	}
+
+	return nil
+}
+
+func main() {
+	if err := run(); err != nil {
+		log.Fatalf("Gateway terminated: %v", err)
 	}
 }
