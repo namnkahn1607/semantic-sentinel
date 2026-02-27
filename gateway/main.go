@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -34,12 +35,16 @@ const (
 	// We haven't attached Semantic Engine, so now latency only relies
 	// on Context Switch and Network I/O.
 	// TODO: After attaching Semantic Engine, change serviceTimeout to 30ms.
-	serviceTimeout        = 2 * time.Millisecond
-	warmupTimeout         = 50 * time.Millisecond
+	serviceTimeout        = 30 * time.Millisecond
+	funcWupTimeout        = 50 * time.Millisecond
+	coldSrtTimeout        = 100 * time.Millisecond
 	serverShutdownTimeout = 5 * time.Second
 	endpoint              = "/v1/cache/check"
 	serverPort            = ":8080"
 	maxReaderSize         = 1024 * 1024
+	// Number of warm-up Goroutines to initiate to force Semantic Engine
+	// to expand Thread Pool and widen Flow Control Window.
+	warmUpConcurrency = 100
 )
 
 // HTTP Handler
@@ -61,7 +66,7 @@ func handleCheckCache(stub pb.SemanticServiceClient) http.HandlerFunc {
 			return
 		}
 
-		// 3. gRPC Context with Timeout of 2ms
+		// 3. gRPC Context with Timeout of 30ms
 		ctx, cancel := context.WithTimeout(r.Context(), serviceTimeout)
 		defer cancel()
 
@@ -99,6 +104,12 @@ func handleCheckCache(stub pb.SemanticServiceClient) http.HandlerFunc {
 	}
 }
 
+func main() {
+	if err := run(); err != nil {
+		log.Fatalf("Gateway terminated: %v", err)
+	}
+}
+
 func run() error {
 	// 1. Setup ONLY ONE connection using grpc.NewClient() (no TLS encryption)
 	conn, connErr := grpc.NewClient(socketAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -117,15 +128,31 @@ func run() error {
 	// 2. Create ONLY ONE Client (Server's stub)
 	clientStub := pb.NewSemanticServiceClient(conn)
 
-	// 3. Warmup routine against gRPC's Lazy Connection
-	log.Println("Warming up gRPC connection to Semantic Engine...")
+	// 3. High-Concurrency Warm-up routine
+	log.Println("Initiating High-Concurrency Warm-up (Thread Pool Expansion)...")
 
-	warmupCtx, warmupCancel := context.WithTimeout(context.Background(), warmupTimeout)
-	defer warmupCancel()
-	if _, warmupErr := clientStub.CheckCache(warmupCtx, &pb.CheckCacheRequest{PromptText: "warmup_signal"}); warmupErr != nil {
-		return warmupErr
+	// Functional Warm-up (against gRPC's Lazy Connection)
+	pingCtx, pingCancel := context.WithTimeout(context.Background(), funcWupTimeout)
+	if _, pingErr := clientStub.CheckCache(pingCtx, &pb.CheckCacheRequest{PromptText: "warmup_signal"}); pingErr != nil {
+		pingCancel()
+		return fmt.Errorf("semantic engine crashed on arrival: %w", pingErr)
 	}
 
+	pingCancel()
+
+	// Cold start Warm-up (100 requests in 100 Goroutines simultaneously)
+	var wg sync.WaitGroup
+	for range warmUpConcurrency {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			burstCtx, burstCancel := context.WithTimeout(context.Background(), coldSrtTimeout)
+			defer burstCancel()
+			_, _ = clientStub.CheckCache(burstCtx, &pb.CheckCacheRequest{PromptText: "warmup_burst"})
+		}()
+	}
+
+	wg.Wait()
 	log.Println("Warmup completed.")
 
 	// 4. Create ServeMux (Router) - register endpoint to handler function
@@ -170,10 +197,4 @@ func run() error {
 
 	log.Printf("HTTP Server stopped.")
 	return nil
-}
-
-func main() {
-	if err := run(); err != nil {
-		log.Fatalf("Gateway terminated: %v", err)
-	}
 }
