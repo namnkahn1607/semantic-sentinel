@@ -22,8 +22,13 @@ public:
 
 void RunServer() {
     const std::string server_address = "unix:///tmp/sentinel.sock";
-    SemanticServiceImpl service;
+    const auto socket_directory = "tmp/sentinel.sock";
 
+    // Clear out old socket file from previous process run
+    // before binding into new one.
+    unlink(socket_directory);
+
+    SemanticServiceImpl service;
     grpc::ServerBuilder builder;
     builder.AddListeningPort(
         server_address,
