@@ -39,6 +39,7 @@ const (
 	serverShutdownTimeout = 5 * time.Second
 	endpoint              = "/v1/cache/check"
 	serverPort            = ":8080"
+	maxReaderSize         = 1024 * 1024
 )
 
 // HTTP Handler
@@ -52,6 +53,8 @@ func handleCheckCache(stub pb.SemanticServiceClient) http.HandlerFunc {
 
 		// 2. Decode Request (from JSON)
 		var apiReq CheckCacheAPIRequest
+		// Set max reader size of 1MB, preventing DDOS attack
+		r.Body = http.MaxBytesReader(w, r.Body, maxReaderSize)
 		if decErr := json.NewDecoder(r.Body).Decode(&apiReq); decErr != nil {
 			log.Printf("Decoding error: %v\n", decErr)
 			http.Error(w, "Bad Request", http.StatusBadRequest)
@@ -115,7 +118,7 @@ func run() error {
 	clientStub := pb.NewSemanticServiceClient(conn)
 
 	// 3. Warmup routine against gRPC's Lazy Connection
-	log.Println("Warming up gRPC connection to Sematic Engine...")
+	log.Println("Warming up gRPC connection to Semantic Engine...")
 
 	warmupCtx, warmupCancel := context.WithTimeout(context.Background(), warmupTimeout)
 	defer warmupCancel()
