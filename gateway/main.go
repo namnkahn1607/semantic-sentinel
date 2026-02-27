@@ -29,7 +29,7 @@ const (
 	// We haven't attached Semantic Engine, so now latency only relies
 	// on Context Switch and Network I/O.
 	// TODO: After attaching Semantic Engine, change serviceTimeout to 30ms.
-	serviceTimeout = 15 * time.Millisecond
+	serviceTimeout = 2 * time.Millisecond
 	warmupTimeout  = 50 * time.Millisecond
 	endpoint       = "/v1/cache/check"
 	serverPort     = ":8080"
