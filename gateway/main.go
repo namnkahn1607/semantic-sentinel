@@ -28,10 +28,11 @@ const (
 	// so timeout must be between 20ms and 50ms (30ms is ideal).
 	// We haven't attached Semantic Engine, so now latency only relies
 	// on Context Switch and Network I/O.
-	// TODO: After attaching Semantic Engine, change timeout to 30ms.
-	timeout    = 15 * time.Millisecond
-	endpoint   = "/v1/cache/check"
-	serverPort = ":8080"
+	// TODO: After attaching Semantic Engine, change serviceTimeout to 30ms.
+	serviceTimeout = 15 * time.Millisecond
+	warmupTimeout  = 50 * time.Millisecond
+	endpoint       = "/v1/cache/check"
+	serverPort     = ":8080"
 )
 
 // HTTP Handler
@@ -52,7 +53,7 @@ func handleCheckCache(stub pb.SemanticServiceClient) http.HandlerFunc {
 		}
 
 		// 3. gRPC Context with Timeout of 2ms
-		ctx, cancel := context.WithTimeout(r.Context(), timeout)
+		ctx, cancel := context.WithTimeout(r.Context(), serviceTimeout)
 		defer cancel()
 
 		// 4. Remote Procedure Call
@@ -105,11 +106,22 @@ func main() {
 	// 2. Create ONLY ONE Client (Server's stub) using NewSemanticServiceClient()
 	clientStub := pb.NewSemanticServiceClient(conn)
 
-	// 3. Create ServeMux (Router) - register endpoint to action function
+	// 3. Warmup routine against gRPC's Lazy Connection
+	log.Println("Warming up gRPC connection to Sematic Engine...")
+
+	warmupCtx, warmupCancel := context.WithTimeout(context.Background(), warmupTimeout)
+	defer warmupCancel()
+	if _, warmupErr := clientStub.CheckCache(warmupCtx, &pb.CheckCacheRequest{PromptText: "warmup_signal"}); warmupErr != nil {
+		log.Fatalf("C++ Engine is not responding or UDS is broken: %v\n", warmupErr)
+	}
+
+	log.Println("Warmup completed.")
+
+	// 4. Create ServeMux (Router) - register endpoint to action function
 	mux := http.NewServeMux()
 	mux.HandleFunc(endpoint, handleCheckCache(clientStub))
 
-	// 4. Open HTTP Server at port 8080 listening for requests
+	// 5. Open HTTP Server at port 8080 listening for requests
 	log.Printf("Gateway listening on %s...\n", serverPort)
 	if portErr := http.ListenAndServe(serverPort, mux); portErr != nil {
 		log.Fatalf("Failed to start HTTP Server: %v\n", portErr)
