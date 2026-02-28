@@ -7,6 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(Protobuf CONFIG REQUIRED)
 find_package(gRPC CONFIG REQUIRED)
+find_package(onnxruntime CONFIG REQUIRED)
 
 add_executable(sentinel_engine
         src/main.cpp
@@ -23,4 +24,5 @@ target_link_libraries(sentinel_engine PRIVATE
         gRPC::grpc++
         gRPC::grpc++_reflection
         protobuf::libprotobuf
+        onnxruntime::onnxruntime
 )

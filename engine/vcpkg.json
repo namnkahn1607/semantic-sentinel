@@ -1,7 +1,8 @@
 {
-    "name": "sentinel-proxy",
-    "version-string": "1.0",
-    "dependencies": [
-        "grpc"
-    ]
+  "name": "sentinel-proxy",
+  "version-string": "1.0",
+  "dependencies": [
+    "grpc",
+    "onnxruntime"
+  ]
 }
