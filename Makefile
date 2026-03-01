@@ -1,12 +1,16 @@
 # sentinel/Makefile
 
-.PHONY: setup config-engine build-engine run-gateway stress-test
+.PHONY: load-model config-engine build-engine run-gateway stress-test
 
 VCPKG_ROOT ?= $(HOME)/vcpkg
 
-setup:
-	@echo "Setting up environment..."
+load-model:
+	@echo "Getting all-MiniLM-L6-v2 Inference Model from HuggingFace..."
 	@bash scripts/get_model.sh
+
+bake-tokenizer:
+	@echo "Baking Tokenizer into the model..."
+	@cd scripts && python bake_tokenizer.py
 
 config-engine:
 	@echo "Configuring C++ Semantic Engine (Release)..."
