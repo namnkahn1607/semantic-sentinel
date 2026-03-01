@@ -13,6 +13,8 @@ add_executable(sentinel_engine
         src/main.cpp
         pb/proto/sentinel.pb.cc
         pb/proto/sentinel.grpc.pb.cc
+        include/embedder.hh
+        src/embedder.cc
 )
 
 target_include_directories(sentinel_engine PRIVATE
