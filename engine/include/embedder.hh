@@ -22,6 +22,11 @@ public:
     Embedder(const Embedder&) = delete;
     Embedder& operator=(const Embedder&) = delete;
 
+    [[nodiscard]] std::vector<float> Encode(const std::string& prompt) const;
+
+    static float CosineSimilarity(const std::vector<float>& vec_a,
+                                  const std::vector<float>& vec_b);
+
 private:
     Ort::Env env_;
     Ort::SessionOptions session_options_;
