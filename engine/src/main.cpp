@@ -8,16 +8,33 @@ public:
     grpc::Status CheckCache(grpc::ServerContext* context,
                             const proto::CheckCacheRequest* request,
                             proto::CheckCacheResponse* response) override {
-        if (request->prompt_text() == "hello") {
-            response->set_is_hit(true);
-            response->set_cached_payload("world");
-        } else {
-            response->set_is_hit(false);
+        try {
+            if (request->prompt_text().empty()) {
+                return {grpc::StatusCode::INVALID_ARGUMENT, "Prompt is empty."};
+            }
+
+            const std::vector<float> req_vector =
+                Embedder::getInstance().Encode(request->prompt_text());
+
+            const std::vector mock_vector(384, 0.1f);
+
+            const float similarity_score =
+                Embedder::CosineSimilarity(req_vector, mock_vector);
+            const bool is_hit = similarity_score >= 0.85;
+
+            response->set_is_hit(is_hit);
+            response->set_similarity_score(similarity_score);
+            response->set_cached_payload(is_hit ? "cached_payload" : "none");
+
+            return grpc::Status::OK;
+
+        } catch (const std::exception& e) {
+            return {grpc::StatusCode::INTERNAL,
+                    std::string("Engine Error: ") + e.what()};
+        } catch (...) {
+            return {grpc::StatusCode::INTERNAL,
+                    "Unknown Fatal Error in C++ Engine."};
         }
-
-        response->set_similarity_score(response->is_hit() ? 1.0 : 0.0);
-
-        return grpc::Status::OK;
     };
 };
 
@@ -47,7 +64,7 @@ void RunServer() {
 }
 
 int main() {
-    Embedder& _ = Embedder::getInstance();
+    [[maybe_unused]] auto& prewarm_engine = Embedder::getInstance();
 
     RunServer();
     return 0;
