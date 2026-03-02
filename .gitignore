@@ -2,6 +2,6 @@
 /engine/.idea
 
 /engine/build
-/engine/model/*.onnx
+/engine/onnxruntime-extensions
 
 /.venv
