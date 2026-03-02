@@ -25,13 +25,15 @@ build-engine: config-engine
 	@echo "Building C++ Semantic Engine..."
 	@cmake --build engine/build-release -j 2
 
-run-engine: build-engine
+run-engine:
 	@echo "Starting C++ Semantic Engine (Release)..."
-	@./engine/build-release/sentinel_engine
+	@INFERENCE_MODEL_PATH="$(PWD)/engine/model/sentinel-minilm-with-tokenizer.onnx" \
+	ORT_EXTENSIONS_PATH="$(PWD)/engine/model/libortextensions.so" \
+	./engine/build-release/sentinel_engine
 
 run-gateway:
 	@echo "Starting Go Gateway..."
-	@cd gateway && go run main.go
+	@cd gateway && go run .
 
 stress-test:
 	@echo "Bombarding Gateway with 10,000 requests (Concurrency: 100)..."
@@ -39,4 +41,4 @@ stress-test:
 
 stress-test-baseline:
 	@echo "Measuring Baseline IPC Latency (Sequential requests)..."
-	@~/go/bin/hey -n 10000 -c 1 -m POST -T "application/json" -d '{"prompt": "hello"}' http://localhost:8080/v1/cache/check
+	@~/go/bin/hey -n 1000 -c 1 -m POST -T "application/json" -d '{"prompt": "hello"}' http://localhost:8080/v1/cache/check
