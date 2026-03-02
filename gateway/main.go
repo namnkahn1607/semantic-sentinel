@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/VictoriaMetrics/fastcache"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -30,25 +32,30 @@ type CheckCacheAPIResponse struct {
 
 const (
 	socketAddress = "unix:///tmp/sentinel.sock"
+	endpoint      = "/v1/cache/check"
+	serverPort    = ":8080"
+
 	// Maximal model inference time is 20ms, service's SLA is 50ms,
 	// so timeout must be between 20ms and 50ms (30ms is ideal).
 	// We haven't attached Semantic Engine, so now latency only relies
 	// on Context Switch and Network I/O.
-	// TODO: After attaching Semantic Engine, change serviceTimeout to 30ms.
 	serviceTimeout        = 30 * time.Millisecond
 	funcWupTimeout        = 50 * time.Millisecond
 	coldSrtTimeout        = 100 * time.Millisecond
 	serverShutdownTimeout = 5 * time.Second
-	endpoint              = "/v1/cache/check"
-	serverPort            = ":8080"
-	maxReaderSize         = 1024 * 1024
+
+	// 256MB L1 Fast Cache maximal size in memory
+	maxL1CacheSize = 256 * 1024 * 1024
+	maxReaderSize  = 1024 * 1024
+	maxPromptLen   = 512
+
 	// Number of warm-up Goroutines to initiate to force Semantic Engine
 	// to expand Thread Pool and widen Flow Control Window.
 	warmUpConcurrency = 100
 )
 
 // HTTP Handler
-func handleCheckCache(stub pb.SemanticServiceClient) http.HandlerFunc {
+func handleCheckCache(stub pb.SemanticServiceClient, l1Cache *fastcache.Cache) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// 1. Method validation
 		if r.Method != http.MethodPost {
@@ -66,23 +73,55 @@ func handleCheckCache(stub pb.SemanticServiceClient) http.HandlerFunc {
 			return
 		}
 
-		// 3. gRPC Context with Timeout of 30ms
+		// 3. Calculate prompt's SHA-256 hashcode
+		promptBytes := []byte(apiReq.Prompt)
+		hash := sha256.Sum256(promptBytes)
+		hashKey := hash[:]
+
+		// 4. Check on L1 Fast Cache using hashcode
+		// Hit -> return to user.
+		l1CachedPayload := l1Cache.Get(nil, hashKey)
+		if l1CachedPayload != nil {
+			w.Header().Set("Content-Type", "application/json")
+			if _, writeErr := w.Write(l1CachedPayload); writeErr != nil {
+				log.Printf("Respond Byte Writing Error: %v\n", writeErr)
+			}
+
+			return
+		}
+
+		// 5. Length Checking, forward to LLM Provider if exceeds 512 bytes
+		if len(promptBytes) > maxPromptLen {
+			// TODO: Make call to LLM Provider API
+			mockLLMResponse := []byte(`{"source": "llm", "text": "long_tail_response"}`)
+
+			// fastcache.Set() is Lock-free and use memcopy at the OS level.
+			l1Cache.Set(hashKey, mockLLMResponse)
+			w.Header().Set("Content-Type", "application/json")
+			if _, writeErr := w.Write(mockLLMResponse); writeErr != nil {
+				log.Printf("Respond Byte Writing Error: %v\n", writeErr)
+			}
+
+			return
+		}
+
+		// 6. gRPC Context with Timeout of 30ms
 		ctx, cancel := context.WithTimeout(r.Context(), serviceTimeout)
 		defer cancel()
 
-		// 4. Remote Procedure Call
-		rpcRes, rpcErr := stub.CheckCache(ctx, &pb.CheckCacheRequest{PromptText: apiReq.Prompt})
+		// 7. Remote Procedure Call
+		grpcRes, rpcErr := stub.CheckCache(ctx, &pb.CheckCacheRequest{PromptText: apiReq.Prompt})
 		if rpcErr != nil {
 			log.Printf("RPC error encountered: %v\n", rpcErr)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 
-		// 5. Encode Request (into JSON)
+		// 8. Encode Request (into JSON)
 		apiRes := CheckCacheAPIResponse{
-			IsHit:           rpcRes.GetIsHit(),
-			CachePayload:    rpcRes.GetCachedPayload(),
-			SimilarityScore: float64(rpcRes.GetSimilarityScore()),
+			IsHit:           grpcRes.GetIsHit(),
+			CachePayload:    grpcRes.GetCachedPayload(),
+			SimilarityScore: float64(grpcRes.GetSimilarityScore()),
 		}
 
 		// Payload buffering
@@ -95,8 +134,6 @@ func handleCheckCache(stub pb.SemanticServiceClient) http.HandlerFunc {
 
 		// Write headers first, body later
 		w.Header().Set("Content-Type", "application/json")
-		// Flush back into TCP Socket - status code is sent via network stream first.
-		w.WriteHeader(http.StatusOK)
 		// Then the payload data is sent later on.
 		if _, writeErr := w.Write(payloadBytes); writeErr != nil {
 			log.Printf("Respond Byte Writing Error: %v\n", writeErr)
@@ -111,7 +148,12 @@ func main() {
 }
 
 func run() error {
-	// 1. Setup ONLY ONE connection using grpc.NewClient() (no TLS encryption)
+	// 1. Initialize L1 Exact-Match Fast Cache
+	log.Printf("Allocating %dMB Off-heap Memory for L1 Exact-Match Cache...", maxL1CacheSize)
+	l1Cache := fastcache.New(maxL1CacheSize)
+	defer l1Cache.Reset()
+
+	// 2. Setup ONLY ONE connection using grpc.NewClient() (no TLS encryption)
 	conn, connErr := grpc.NewClient(socketAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if connErr != nil {
 		return connErr
@@ -125,10 +167,10 @@ func run() error {
 		}
 	}()
 
-	// 2. Create ONLY ONE Client (Server's stub)
+	// 3. Create ONLY ONE Client (Server's stub)
 	clientStub := pb.NewSemanticServiceClient(conn)
 
-	// 3. High-Concurrency Warm-up routine
+	// 4. High-Concurrency Warm-up routine
 	log.Println("Initiating High-Concurrency Warm-up (Thread Pool Expansion)...")
 
 	// Functional Warm-up (against gRPC's Lazy Connection)
@@ -155,21 +197,21 @@ func run() error {
 	wg.Wait()
 	log.Println("Warmup completed.")
 
-	// 4. Create ServeMux (Router) - register endpoint to handler function
+	// 5. Create ServeMux (Router) - register endpoint to handler function
 	mux := http.NewServeMux()
-	mux.HandleFunc(endpoint, handleCheckCache(clientStub))
+	mux.HandleFunc(endpoint, handleCheckCache(clientStub, l1Cache))
 
-	// 5. Create Server instance (with address and handler function)
+	// 6. Create Server instance (with address and handler function)
 	server := &http.Server{
 		Addr:    serverPort,
 		Handler: mux,
 	}
 
-	// 6. OS signal channel
+	// 7. OS signal channel
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt /* SIGINT */, syscall.SIGTERM)
 
-	// 7. HTTP Server error channel
+	// 8. HTTP Server error channel
 	serverErrChan := make(chan error, 1)
 	go func() {
 		log.Printf("Gateway listening on %s...\n", serverPort)
@@ -178,7 +220,7 @@ func run() error {
 		}
 	}()
 
-	// 8. Catch ONLY the first item into one of the channels
+	// 9. Catch ONLY the first item into one of the channels
 	select {
 	case err := <-serverErrChan:
 		return fmt.Errorf("HTTP Server crashed %w", err)
@@ -186,11 +228,11 @@ func run() error {
 		log.Printf("Received signal: %v. Initiating graceful shutdown...\n", sig)
 	}
 
-	// 9. Create context timeout - the Server waits for remaining goroutines to finish
+	// 10. Create context timeout - the Server waits for remaining goroutines to finish
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), serverShutdownTimeout)
 	defer shutdownCancel()
 
-	// 10. Perform Server graceful shutdown
+	// 11. Perform Server graceful shutdown
 	if shutdownErr := server.Shutdown(shutdownCtx); shutdownErr != nil {
 		return fmt.Errorf("HTTP Server shutdown failed: %w", shutdownErr)
 	}
