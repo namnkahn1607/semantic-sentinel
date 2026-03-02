@@ -1,5 +1,6 @@
 #include <grpcpp/grpcpp.h>
 
+#include "embedder.hh"
 #include "proto/sentinel.grpc.pb.h"
 
 class SemanticServiceImpl final : public proto::SemanticService::Service {
@@ -22,7 +23,7 @@ public:
 
 void RunServer() {
     const std::string server_address = "unix:///tmp/sentinel.sock";
-    const auto socket_directory = "tmp/sentinel.sock";
+    const auto socket_directory = "/tmp/sentinel.sock";
 
     // Clear out old socket file from previous process run
     // before binding into new one.
@@ -46,6 +47,8 @@ void RunServer() {
 }
 
 int main() {
+    Embedder& _ = Embedder::getInstance();
+
     RunServer();
     return 0;
 }
