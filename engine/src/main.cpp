@@ -20,7 +20,7 @@ public:
 
             const float similarity_score =
                 Embedder::CosineSimilarity(req_vector, mock_vector);
-            const bool is_hit = similarity_score >= 0.85;
+            const bool is_hit = similarity_score >= 0.85f;
 
             response->set_is_hit(is_hit);
             response->set_similarity_score(similarity_score);
@@ -64,8 +64,24 @@ void RunServer() {
 }
 
 int main() {
-    [[maybe_unused]] auto& prewarm_engine = Embedder::getInstance();
+    try {
+        const std::string test_prompt = "hello world";
+        const std::vector<float> vec_b =
+            Embedder::getInstance().Encode(test_prompt);
+        std::cout << "Pipeline B (C++ Baked model) - First 8 floats: "
+                  << std::endl;
+        std::cout << "[";
+        for (int i = 0; i < 8; ++i) {
+            std::cout << std::fixed << std::setprecision(6) << vec_b[i];
+            if (i < 7) {
+                std::cout << ", ";
+            }
+        }
+        std::cout << "]" << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+    }
 
-    RunServer();
+    std::cout << "Completed. Opening to gRPC..." << std::endl;
     return 0;
 }

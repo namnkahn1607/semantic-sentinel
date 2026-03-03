@@ -26,7 +26,7 @@ Embedder::Embedder() {
         session_options_.RegisterCustomOpsLibrary(ext_path);
     } catch (const Ort::Exception& e) {
         throw std::runtime_error(
-            std::string("Failed to load custom ops library") + e.what());
+            std::string("Failed to load custom ops library: ") + e.what());
     }
 
     session_ =
