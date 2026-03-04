@@ -1,10 +1,15 @@
 #include <grpcpp/grpcpp.h>
 
+#include <algorithm>
+#include <vector>
+
 #include "embedder.hh"
 #include "proto/sentinel.grpc.pb.h"
 
 class SemanticServiceImpl final : public proto::SemanticService::Service {
 public:
+    SemanticServiceImpl() : mock_database(10000, std::vector(384, 0.1f)) {}
+
     grpc::Status CheckCache(grpc::ServerContext* context,
                             const proto::CheckCacheRequest* request,
                             proto::CheckCacheResponse* response) override {
@@ -16,14 +21,17 @@ public:
             const std::vector<float> req_vector =
                 Embedder::getInstance().Encode(request->prompt_text());
 
-            const std::vector mock_vector(384, 0.1f);
+            float max_similarity = -1.0f;
+            for (const std::vector<float>& mock_vector : mock_database) {
+                max_similarity = std::max(
+                    max_similarity,
+                    Embedder::CosineSimilarity(req_vector, mock_vector));
+            }
 
-            const float similarity_score =
-                Embedder::CosineSimilarity(req_vector, mock_vector);
-            const bool is_hit = similarity_score >= 0.85f;
+            const bool is_hit = max_similarity >= 0.85f;
 
             response->set_is_hit(is_hit);
-            response->set_similarity_score(similarity_score);
+            response->set_similarity_score(max_similarity);
             response->set_cached_payload(is_hit ? "cached_payload" : "none");
 
             return grpc::Status::OK;
@@ -36,6 +44,9 @@ public:
                     "Unknown Fatal Error in C++ Engine."};
         }
     };
+
+private:
+    std::vector<std::vector<float>> mock_database;
 };
 
 void RunServer() {
@@ -83,5 +94,7 @@ int main() {
     }
 
     std::cout << "Completed. Opening to gRPC..." << std::endl;
+    RunServer();
+
     return 0;
 }

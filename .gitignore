@@ -1,6 +1,7 @@
 /gateway/.idea
 /engine/.idea
 
+/engine/.cache
 /engine/build
 /engine/onnxruntime-extensions
 

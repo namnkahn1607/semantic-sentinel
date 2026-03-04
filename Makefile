@@ -35,10 +35,14 @@ run-gateway:
 	@echo "Starting Go Gateway..."
 	@cd gateway && go run .
 
-stress-test:
-	@echo "Bombarding Gateway with 10,000 requests (Concurrency: 100)..."
-	@~/go/bin/hey -n 10000 -c 100 -m POST -T "application/json" -d '{"prompt": "hello"}' http://localhost:8080/v1/cache/check
-
-stress-test-baseline:
+gateway-1-1k:
 	@echo "Measuring Baseline IPC Latency (Sequential requests)..."
 	@~/go/bin/hey -n 1000 -c 1 -m POST -T "application/json" -d '{"prompt": "hello"}' http://localhost:8080/v1/cache/check
+
+gateway-100-10k:
+	@echo "Bombarding Gateway with 10k requests (Concurrency: 100)..."
+	@~/go/bin/hey -n 10000 -c 100 -m POST -T "application/json" -d '{"prompt": "hello"}' http://localhost:8080/v1/cache/check
+
+engine-50-100k:
+	@echo "Shooting 100k requests (Concurrency: 50) directly at C++ Semantic Engine..."
+	@ghz --insecure --proto ./api/proto/sentinel.proto --call SemanticService.CheckCache -d '{"prompt_text": "hello"}' -c 50 -n 100000 unix:///tmp/sentinel.sock
