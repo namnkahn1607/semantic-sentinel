@@ -4,6 +4,8 @@
 
 #include "embedder.hh"
 
+#include "constant.hh"
+
 Embedder::Embedder() {
     const char* model_path = std::getenv("INFERENCE_MODEL_PATH");
     const char* ext_path = std::getenv("ORT_EXTENSIONS_PATH");
@@ -72,6 +74,10 @@ std::vector<float> Embedder::Encode(const std::string& prompt) const {
             "Sequence length is 0. Cannot compute mean pooling.");
     }
 
+    if (vec_dimension != engine::VECTOR_LENGTH) {
+        throw std::runtime_error("Unexpected vector length");
+    }
+
     const auto* float_array = output_tensor.GetTensorData<float>();
 
     // 7. Squeeze 2D array [N][384] into [384] array using Mean Pooling
@@ -88,30 +94,33 @@ std::vector<float> Embedder::Encode(const std::string& prompt) const {
         val /= seq_len_f;
     }
 
+    // 8. Perform L2 Normalization
+    float sum_sq = 0.0f;
+    for (int i = 0; i < vec_dimension; ++i) {
+        sum_sq += pooled_vector[i] * pooled_vector[i];
+    }
+
+    const float inv_magnitude =
+        1.0f / std::sqrt(sum_sq);  // Only perform square root once
+    for (int i = 0; i < vec_dimension; ++i) {
+        pooled_vector[i] *= inv_magnitude;
+    }
+
     return pooled_vector;
 }
 
 float Embedder::CosineSimilarity(const std::vector<float>& vec_a,
                                  const std::vector<float>& vec_b) {
-    constexpr int32_t VECTOR_SIZE = 384;
-
-    if (vec_a.size() != VECTOR_SIZE || vec_b.size() != VECTOR_SIZE) {
+    if (vec_a.size() != engine::VECTOR_LENGTH ||
+        vec_b.size() != engine::VECTOR_LENGTH) {
         throw std::runtime_error("Wrong dimension. Vector size must be 384.");
     }
 
     float dot_product = 0.0f;
-    float norm_a_sq = 0.0f;
-    float norm_b_sq = 0.0f;
 
-    for (int32_t i = 0; i < VECTOR_SIZE; ++i) {
+    for (int32_t i = 0; i < engine::VECTOR_LENGTH; ++i) {
         dot_product += vec_a[i] * vec_b[i];
-        norm_a_sq += vec_a[i] * vec_a[i];
-        norm_b_sq += vec_b[i] * vec_b[i];
     }
 
-    if (norm_a_sq == 0.0f || norm_b_sq == 0.0f) {  // Handle empty vectors
-        return 0.0f;
-    }
-
-    return dot_product / (std::sqrt(norm_a_sq) * std::sqrt(norm_b_sq));
+    return dot_product;
 }
