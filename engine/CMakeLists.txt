@@ -18,6 +18,15 @@ add_executable(sentinel_engine
         src/embedder.cc
 )
 
+target_compile_options(sentinel_engine PRIVATE
+        -Wall # All basic warnings
+        -Wextra # More warnings
+        -Wpedantic # ISO C++ is a MUST
+        -Wshadow # Local variables must not shadow outer-scope ones
+        -Wconversion # When implicit conversion might cause data loss
+        -Wunreachable-code # Unreachable code warnings
+)
+
 target_include_directories(sentinel_engine PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/pb
