@@ -45,4 +45,4 @@ gateway-100-10k:
 
 engine-50-100k:
 	@echo "Shooting 100k requests (Concurrency: 50) directly at C++ Semantic Engine..."
-	@ghz --insecure --proto ./api/proto/sentinel.proto --call SemanticService.CheckCache -d '{"prompt_text": "hello"}' -c 50 -n 100000 unix:///tmp/sentinel.sock
+	@ghz --insecure --proto ./api/proto/sentinel.proto --call proto.SemanticService.CheckCache -d '{"prompt_text": "hello"}' -c 50 -n 100000 unix:///tmp/sentinel.sock
