@@ -7,8 +7,8 @@
 #include "constant.hh"
 
 Embedder::Embedder() {
-    const char* model_path = std::getenv("INFERENCE_MODEL_PATH");
-    const char* ext_path = std::getenv("ORT_EXTENSIONS_PATH");
+    const char* model_path{std::getenv("INFERENCE_MODEL_PATH")};
+    const char* ext_path{std::getenv("ORT_EXTENSIONS_PATH")};
 
     if (model_path == nullptr || ext_path == nullptr) {
         throw std::runtime_error(
@@ -37,37 +37,39 @@ Embedder::Embedder() {
 
 std::vector<float> Embedder::Encode(const std::string& prompt) const {
     // 1. Initialize standard allocator for ONNX
-    Ort::MemoryInfo mem_info =
-        Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
+    Ort::MemoryInfo mem_info{
+        Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault)};
     const Ort::AllocatorWithDefaultOptions allocator;
 
     // 2. Define Tensor Input structure
-    const std::vector<int64_t> input_shape = {1};
-    const char* input_string = prompt.c_str();
+    const std::vector<int64_t> input_shape{1};
+    const char* input_string{prompt.c_str()};
 
     // 3. Create String Tensor
-    Ort::Value input_tensor = Ort::Value::CreateTensor(
+    Ort::Value input_tensor{Ort::Value::CreateTensor(
         allocator, input_shape.data(), input_shape.size(),
-        ONNX_TENSOR_ELEMENT_DATA_TYPE_STRING);
+        ONNX_TENSOR_ELEMENT_DATA_TYPE_STRING)};
     input_tensor.FillStringTensor(&input_string, 1);
 
     // 4. Prepare Run configurations
-    const char* input_names[] = {"text"};
-    const char* output_names[] = {"last_hidden_state"};
+    const char* input_names[]{"text"};
+    const char* output_names[]{"last_hidden_state"};
 
     // 5. Use Neural Network to execute the Input Tensor
-    const auto output_tensors =
-        session_->Run(Ort::RunOptions{nullptr}, input_names, &input_tensor, 1,
-                      output_names, 1);
+    const auto output_tensors{session_->Run(Ort::RunOptions{nullptr},
+                                            input_names, &input_tensor, 1,
+                                            output_names, 1)};
 
     // 6. Extract Output Data
-    const Ort::Value& output_tensor = output_tensors.front();
-    const auto type_info = output_tensor.GetTensorTypeAndShapeInfo();
+    const Ort::Value& output_tensor{output_tensors.front()};
+    const auto type_info{output_tensor.GetTensorTypeAndShapeInfo()};
     // Output shape is always [1, N, 384].
-    const std::vector<int64_t> output_shape = type_info.GetShape();
+    const std::vector output_shape{type_info.GetShape()};
 
-    const int64_t seq_length = output_shape[1];  // number of tokens in sequence
-    const int64_t vec_dimension = output_shape[2];  // vector dimension: 384
+    const size_t seq_length{
+        static_cast<size_t>(output_shape[1])};  // number of tokens in sequence
+    const size_t vec_dimension{
+        static_cast<size_t>(output_shape[2])};  // vector dimension: 384
 
     if (seq_length == 0) {
         throw std::runtime_error(
@@ -78,13 +80,13 @@ std::vector<float> Embedder::Encode(const std::string& prompt) const {
         throw std::runtime_error("Unexpected vector length");
     }
 
-    const auto* float_array = output_tensor.GetTensorData<float>();
+    const auto* float_array{output_tensor.GetTensorData<float>()};
 
     // 7. Squeeze 2D array [N][384] into [384] array using Mean Pooling
     std::vector pooled_vector(vec_dimension, 0.0f);
 
-    for (int64_t i = 0; i < seq_length; ++i) {
-        for (int64_t j = 0; j < vec_dimension; ++j) {
+    for (size_t i = 0; i < seq_length; ++i) {
+        for (size_t j = 0; j < vec_dimension; ++j) {
             pooled_vector[j] += float_array[i * vec_dimension + j];
         }
     }
@@ -96,13 +98,13 @@ std::vector<float> Embedder::Encode(const std::string& prompt) const {
 
     // 8. Perform L2 Normalization
     float sum_sq = 0.0f;
-    for (int i = 0; i < vec_dimension; ++i) {
+    for (size_t i = 0; i < vec_dimension; ++i) {
         sum_sq += pooled_vector[i] * pooled_vector[i];
     }
 
-    const float inv_magnitude =
-        1.0f / std::sqrt(sum_sq);  // Only perform square root once
-    for (int i = 0; i < vec_dimension; ++i) {
+    const float inv_magnitude{
+        1.0f / std::sqrt(sum_sq)};  // Only perform square root once
+    for (size_t i = 0; i < vec_dimension; ++i) {
         pooled_vector[i] *= inv_magnitude;
     }
 
@@ -118,7 +120,7 @@ float Embedder::CosineSimilarity(const std::vector<float>& vec_a,
 
     float dot_product = 0.0f;
 
-    for (int32_t i = 0; i < engine::VECTOR_LENGTH; ++i) {
+    for (size_t i = 0; i < engine::VECTOR_LENGTH; ++i) {
         dot_product += vec_a[i] * vec_b[i];
     }
 

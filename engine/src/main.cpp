@@ -18,17 +18,17 @@ public:
                 return {grpc::StatusCode::INVALID_ARGUMENT, "Prompt is empty."};
             }
 
-            const std::vector<float> req_vector =
-                Embedder::getInstance().Encode(request->prompt_text());
+            const std::vector req_vector{
+                Embedder::getInstance().Encode(request->prompt_text())};
 
-            float max_similarity = -1.0f;
+            float max_similarity{-1.0f};
             for (const std::vector<float>& mock_vector : mock_database) {
                 max_similarity = std::max(
                     max_similarity,
                     Embedder::CosineSimilarity(req_vector, mock_vector));
             }
 
-            const bool is_hit = max_similarity >= 0.85f;
+            const bool is_hit{max_similarity >= 0.85f};
 
             response->set_is_hit(is_hit);
             response->set_similarity_score(max_similarity);
@@ -50,8 +50,8 @@ private:
 };
 
 void RunServer() {
-    const std::string server_address = "unix:///tmp/sentinel.sock";
-    const auto socket_directory = "/tmp/sentinel.sock";
+    const std::string server_address{"unix:///tmp/sentinel.sock"};
+    const auto socket_directory{"/tmp/sentinel.sock"};
 
     // Clear out old socket file from previous process run
     // before binding into new one.
@@ -77,18 +77,20 @@ void RunServer() {
 int main() {
     try {
         const std::string test_prompt = "hello world";
-        const std::vector<float> vec_b =
-            Embedder::getInstance().Encode(test_prompt);
+        const std::vector vec_b{Embedder::getInstance().Encode(test_prompt)};
+
         std::cout << "Pipeline B (C++ Baked model) - First 8 floats: "
                   << std::endl;
         std::cout << "[";
-        for (int i = 0; i < 8; ++i) {
+        for (size_t i = 0; i < 8; ++i) {
             std::cout << std::fixed << std::setprecision(6) << vec_b[i];
             if (i < 7) {
                 std::cout << ", ";
             }
         }
+
         std::cout << "]" << std::endl;
+
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
     }

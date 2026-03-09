@@ -8,7 +8,7 @@
 #include <cstdint>
 
 namespace engine {
-inline constexpr int32_t VECTOR_LENGTH = 384;
+inline constexpr size_t VECTOR_LENGTH = 384;
 }
 
 #endif  // SENTINEL_ENGINE_CONSTANT_HH
