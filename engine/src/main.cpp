@@ -10,7 +10,7 @@ class SemanticServiceImpl final : public proto::SemanticService::Service {
 public:
     SemanticServiceImpl() : mock_database(10000, std::vector(384, 0.1f)) {}
 
-    grpc::Status CheckCache(grpc::ServerContext* context,
+    grpc::Status CheckCache([[maybe_unused]] grpc::ServerContext* context,
                             const proto::CheckCacheRequest* request,
                             proto::CheckCacheResponse* response) override {
         try {
