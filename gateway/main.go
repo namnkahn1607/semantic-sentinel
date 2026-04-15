@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"sync"
 	"syscall"
 	"time"
@@ -36,6 +37,9 @@ const (
 )
 
 func main() {
+	// Affinity setting: use only 1 vCPU
+	runtime.GOMAXPROCS(1)
+
 	if err := run(); err != nil {
 		log.Fatalf("Gateway terminated: %v", err)
 	}
@@ -117,7 +121,7 @@ func run() error {
 	// 9. Catch ONLY the first item into one of the channels
 	select {
 	case err := <-serverErrChan:
-		return fmt.Errorf("HTTP Server crashed %w", err)
+		return fmt.Errorf("HTTP Server crashed due to:  %w", err)
 	case sig := <-sigChan:
 		log.Printf("Received signal: %v. Initiating graceful shutdown...\n", sig)
 	}
