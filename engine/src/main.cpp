@@ -75,28 +75,9 @@ void RunServer() {
 }
 
 int main() {
-    try {
-        const std::string test_prompt = "hello world";
-        const std::vector vec_b{Embedder::getInstance().Encode(test_prompt)};
-
-        std::cout << "Pipeline B (C++ Baked model) - First 8 floats: "
-                  << std::endl;
-        std::cout << "[";
-        for (size_t i = 0; i < 8; ++i) {
-            std::cout << std::fixed << std::setprecision(6) << vec_b[i];
-            if (i < 7) {
-                std::cout << ", ";
-            }
-        }
-
-        std::cout << "]" << std::endl;
-
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-    }
-
     std::cout << "Completed. Opening to gRPC..." << std::endl;
     RunServer();
+    std::cout << "Closing Vector Engine..." << std::endl;
 
     return 0;
 }

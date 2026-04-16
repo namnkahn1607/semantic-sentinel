@@ -18,7 +18,7 @@ public:
         return instance;
     }
 
-    // Block Copy Constructor & Copy Assignment Operator
+    // Remove Copy Constructor & Copy Assignment Operator
     Embedder(const Embedder&) = delete;
     Embedder& operator=(const Embedder&) = delete;
 

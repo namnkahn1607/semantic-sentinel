@@ -8,12 +8,15 @@
 
 Embedder::Embedder() {
     const char* model_path{std::getenv("INFERENCE_MODEL_PATH")};
-    const char* ext_path{std::getenv("ORT_EXTENSIONS_PATH")};
-
-    if (model_path == nullptr || ext_path == nullptr) {
+    if (model_path == nullptr) {
         throw std::runtime_error(
-            "Environment variables INFERENCE_MODEL_PATH or ORT_EXTENSIONS_PATH "
-            "are not set");
+            "Environment variable INFERENCE_MODEL_PATH or is not set");
+    }
+
+    const char* ext_path{std::getenv("ORT_EXTENSIONS_PATH")};
+    if (ext_path == nullptr) {
+        throw std::runtime_error(
+            "Environment variable ORT_EXTENSIONS_PATH is not set");
     }
 
     env_ = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "onnx-env");
@@ -115,7 +118,7 @@ float Embedder::CosineSimilarity(const std::vector<float>& vec_a,
                                  const std::vector<float>& vec_b) {
     if (vec_a.size() != engine::VECTOR_LENGTH ||
         vec_b.size() != engine::VECTOR_LENGTH) {
-        throw std::runtime_error("Wrong dimension. Vector size must be 384.");
+        throw std::runtime_error("Vector must be 384-dimensional");
     }
 
     float dot_product = 0.0f;
