@@ -31,6 +31,10 @@ run-engine:
 	ORT_EXTENSIONS_PATH="$(PWD)/engine/model/libortextensions.so" \
 	./engine/build-release/sentinel_engine
 
+build-gateway:
+	@echo "Building Go Gateway..."
+	@cd gateway && go build -o build-release/gateway main.go http_handler.go
+
 run-gateway:
 	@echo "Starting Go Gateway..."
 	@cd gateway && go run .
