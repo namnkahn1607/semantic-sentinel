@@ -47,7 +47,7 @@ func main() {
 
 func run() error {
 	// 1. Initialize L1 Exact-Match Fast Cache
-	log.Printf("Allocating %dMB Off-heap Memory for L1 Exact-Match Cache...", maxL1CacheSize)
+	log.Printf("Allocating %dMB Off-heap Memory for L1 Exact-Match Cache...", maxL1CacheSize/(1024*1024))
 	l1Cache := fastcache.New(maxL1CacheSize)
 	defer l1Cache.Reset()
 
@@ -75,7 +75,7 @@ func run() error {
 	pingCtx, pingCancel := context.WithTimeout(context.Background(), funcWupTimeout)
 	if _, pingErr := clientStub.CheckCache(pingCtx, &pb.CheckCacheRequest{PromptText: "warmup_signal"}); pingErr != nil {
 		pingCancel()
-		return fmt.Errorf("semantic engine crashed on arrival: %w", pingErr)
+		return fmt.Errorf("Vector Engine crashed on arrival: %w", pingErr)
 	}
 
 	pingCancel()
