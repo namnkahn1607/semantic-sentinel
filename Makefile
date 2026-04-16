@@ -62,6 +62,9 @@ run-prod:
 		--name sentinel-instance \
 		--cpuset-cpus="0-3" \
 		--memory="8g" \
+		-v $(PWD)/engine/model:/app/model \
+		-e INFERENCE_MODEL_PATH="/app/model/sentinel-minilm-with-tokenizer.onnx" \
+		-e ORT_EXTENSIONS_PATH="/app/model/libortextensions.so" \
 		-p 8080:8080 \
 		sentinel-prod
 
