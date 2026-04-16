@@ -5,8 +5,6 @@
 #ifndef SENTINEL_ENGINE_CONSTANT_HH
 #define SENTINEL_ENGINE_CONSTANT_HH
 
-#include <cstdint>
-
 namespace engine {
 inline constexpr size_t VECTOR_LENGTH = 384;
 }
