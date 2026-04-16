@@ -1,6 +1,6 @@
 # sentinel/Makefile
 
-.PHONY: load-model config-engine build-engine run-gateway stress-test
+.PHONY: load-model bake-tokenizer config-engine build-engine run-engine build-gateway run-gateway build-docker run-prod stop-prod
 
 VCPKG_ROOT ?= $(HOME)/vcpkg
 
@@ -50,3 +50,21 @@ gateway-100-10k:
 engine-50-100k:
 	@echo "Shooting 100k requests (Concurrency: 50) directly at C++ Semantic Engine..."
 	@ghz --insecure --proto ./api/proto/sentinel.proto --call proto.SemanticService.CheckCache -d '{"prompt_text": "hello"}' -c 50 -n 100000 unix:///tmp/sentinel.sock
+
+build-docker: build-gateway build-engine
+	@echo "Packaging Sentinel into Docker Image..."
+	@docker build -t sentinel-prod .
+
+run-prod:
+	@echo "Deploying Sentinel to Docker..."
+	@echo "Physical Constraints: 4 vCPUs (Cores 0-3), 8GB RAM Strict Limit"
+	@docker run -it --rm \
+		--name sentinel-instance \
+		--cpuset-cpus="0-3" \
+		--memory="8g" \
+		-p 8080:8080 \
+		sentinel-prod
+
+stop-prod:
+	@echo "Terminating Sentinel container..."
+	@docker stop sentinel-instance || true
