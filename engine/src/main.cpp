@@ -71,7 +71,7 @@ private:
     MemoryArena& memory_arena;
 };
 
-void RunServer() {
+void RunServer(MemoryArena& arena) {
     const std::string server_address{"unix:///tmp/sentinel.sock"};
     const auto socket_directory{"/tmp/sentinel.sock"};
 
@@ -79,11 +79,8 @@ void RunServer() {
     // before binding into new one.
     unlink(socket_directory);
 
-    // Main Thread is responsible for construct & deconstruct Memory Arena.
-    const auto memory_arena = std::make_unique<MemoryArena>();
-
     // Service is only allowed to reference for reading and writing data.
-    SemanticServiceImpl service(*memory_arena);
+    SemanticServiceImpl service(arena);
 
     grpc::ServerBuilder builder;
     builder.AddListeningPort(
@@ -102,8 +99,11 @@ void RunServer() {
 }
 
 int main() {
+    // Main Thread is responsible for construct & deconstruct Memory Arena.
+    const auto memory_arena = std::make_unique<MemoryArena>();
+
     std::cout << "[Vector Engine] Opening to gRPC..." << std::endl;
-    RunServer();
+    RunServer(*memory_arena);
     std::cout << "[Vector Engine] Closing..." << std::endl;
 
     return 0;
