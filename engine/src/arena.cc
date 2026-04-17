@@ -52,3 +52,11 @@ MemoryArena::~MemoryArena() {
     delete[] l0_metadata;
     delete[] l1_metadata;
 }
+
+MetaNode& MemoryArena::getL0Node(const size_t i) const {
+    return l0_metadata[i];
+}
+
+MetaNode& MemoryArena::getL1Node(const size_t i) const {
+    return l1_metadata[i];
+}

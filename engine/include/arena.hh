@@ -15,6 +15,13 @@ struct alignas(64) MetaNode {
     std::atomic<uint64_t> payload_offset;
 };
 
+enum class NodeState : uint8_t {
+    DEAD = 0,
+    PENDING = 1,
+    READY = 2,
+    MIGRATING = 3
+};
+
 class MemoryArena {
 public:
     MemoryArena();
@@ -24,11 +31,13 @@ public:
     MemoryArena(const MemoryArena&) = delete;
     MemoryArena& operator=(const MemoryArena&) = delete;
 
+    [[nodiscard]] inline MetaNode& getL0Node(size_t i) const;
+    [[nodiscard]] inline MetaNode& getL1Node(size_t i) const;
+
 private:
     // Vector Arena
     MetaNode* l0_metadata;
     MetaNode* l1_metadata;
-
     float* l0_vectors;
     float* l1_vectors;
 
