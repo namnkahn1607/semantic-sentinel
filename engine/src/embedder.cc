@@ -79,7 +79,7 @@ std::vector<float> Embedder::Encode(const std::string& prompt) const {
             "Sequence length is 0. Cannot compute mean pooling.");
     }
 
-    if (vec_dimension != engine::VECTOR_LENGTH) {
+    if (vec_dimension != engine::VECTOR_DIM) {
         throw std::runtime_error("Unexpected vector length");
     }
 
@@ -116,14 +116,14 @@ std::vector<float> Embedder::Encode(const std::string& prompt) const {
 
 float Embedder::CosineSimilarity(const std::vector<float>& vec_a,
                                  const std::vector<float>& vec_b) {
-    if (vec_a.size() != engine::VECTOR_LENGTH ||
-        vec_b.size() != engine::VECTOR_LENGTH) {
+    if (vec_a.size() != engine::VECTOR_DIM ||
+        vec_b.size() != engine::VECTOR_DIM) {
         throw std::runtime_error("Vector must be 384-dimensional");
     }
 
     float dot_product = 0.0f;
 
-    for (size_t i = 0; i < engine::VECTOR_LENGTH; ++i) {
+    for (size_t i = 0; i < engine::VECTOR_DIM; ++i) {
         dot_product += vec_a[i] * vec_b[i];
     }
 

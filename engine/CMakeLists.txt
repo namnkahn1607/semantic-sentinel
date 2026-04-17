@@ -10,12 +10,14 @@ find_package(gRPC CONFIG REQUIRED)
 find_package(onnxruntime CONFIG REQUIRED)
 
 add_executable(sentinel_engine
-        src/main.cpp
         pb/proto/sentinel.pb.cc
         pb/proto/sentinel.grpc.pb.cc
+        src/arena.cc
+        src/embedder.cc
+        src/main.cpp
+        include/arena.hh
         include/constant.hh
         include/embedder.hh
-        src/embedder.cc
 )
 
 target_compile_options(sentinel_engine PRIVATE
