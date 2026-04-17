@@ -41,7 +41,7 @@ MemoryArena::MemoryArena() : write_head(0) {
         l1_metadata[i].payload_offset.store(0, std::memory_order_relaxed);
     }
 
-    std::cout << "Vector Engine: Initialized Dual Memory Arena" << std::endl;
+    std::cout << "[Vector Engine] Initialized Dual Memory Arena" << std::endl;
 }
 
 MemoryArena::~MemoryArena() {

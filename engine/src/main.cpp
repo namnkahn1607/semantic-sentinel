@@ -15,38 +15,21 @@ public:
                             proto::CheckCacheResponse* response) override {
         try {
             if (request->prompt_text().empty()) {
-                return {grpc::StatusCode::INVALID_ARGUMENT, "Prompt is empty."};
+                return {grpc::StatusCode::INVALID_ARGUMENT,
+                        "User prompt is empty."};
             }
-
-            const std::vector req_vector{
-                Embedder::getInstance().Encode(request->prompt_text())};
-
-            float max_similarity{-1.0f};
-            for (const std::vector<float>& mock_vector : mock_database) {
-                max_similarity = std::max(
-                    max_similarity,
-                    Embedder::CosineSimilarity(req_vector, mock_vector));
-            }
-
-            const bool is_hit{max_similarity >= 0.85f};
-
-            response->set_is_hit(is_hit);
-            response->set_similarity_score(max_similarity);
-            response->set_cached_payload(is_hit ? "cached_payload" : "none");
 
             return grpc::Status::OK;
 
         } catch (const std::exception& e) {
-            return {grpc::StatusCode::INTERNAL,
-                    std::string("Engine Error: ") + e.what()};
+            return {
+                grpc::StatusCode::INTERNAL,
+                std::string("[Vector Engine] Encounter error: ") + e.what()};
         } catch (...) {
             return {grpc::StatusCode::INTERNAL,
-                    "Unknown Fatal Error in C++ Engine."};
+                    "[Vector Engine] Unknown Fatal error"};
         }
     };
-
-private:
-    std::vector<std::vector<float>> mock_database;
 };
 
 void RunServer() {
@@ -75,9 +58,9 @@ void RunServer() {
 }
 
 int main() {
-    std::cout << "Completed. Opening to gRPC..." << std::endl;
+    std::cout << "[Vector Engine] Opening to gRPC..." << std::endl;
     RunServer();
-    std::cout << "Closing Vector Engine..." << std::endl;
+    std::cout << "[Vector Engine] Closing..." << std::endl;
 
     return 0;
 }

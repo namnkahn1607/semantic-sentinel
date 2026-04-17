@@ -10,7 +10,7 @@ Embedder::Embedder() {
     const char* model_path{std::getenv("INFERENCE_MODEL_PATH")};
     if (model_path == nullptr) {
         throw std::runtime_error(
-            "Environment variable INFERENCE_MODEL_PATH or is not set");
+            "Environment variable INFERENCE_MODEL_PATH is not set");
     }
 
     const char* ext_path{std::getenv("ORT_EXTENSIONS_PATH")};
