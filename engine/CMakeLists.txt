@@ -15,9 +15,11 @@ add_executable(sentinel_engine
         src/arena.cc
         src/embedder.cc
         src/main.cpp
+        src/service.cc
         include/arena.hh
         include/constant.hh
         include/embedder.hh
+        include/service.hh
 )
 
 target_compile_options(sentinel_engine PRIVATE
