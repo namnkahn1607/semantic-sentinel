@@ -20,6 +20,11 @@ public:
                             const proto::CheckCacheRequest* request,
                             proto::CheckCacheResponse* response) override;
 
+    uint64_t WriteRingBuffer(const uint8_t* payload, size_t length);
+
+    // Future gRPC method
+    bool SetCache(uint32_t node_id, const std::string& payload);
+
 private:
     MemoryArena& memory_arena;
 };

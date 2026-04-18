@@ -53,10 +53,18 @@ MemoryArena::~MemoryArena() {
     delete[] l1_metadata;
 }
 
-MetaNode& MemoryArena::getL0Node(const size_t i) const {
+MetaNode& MemoryArena::GetL0Node(const size_t i) const {
     return l0_metadata[i];
 }
 
-MetaNode& MemoryArena::getL1Node(const size_t i) const {
+MetaNode& MemoryArena::GetL1Node(const size_t i) const {
     return l1_metadata[i];
+}
+
+uint64_t MemoryArena::GetWriteHead() const {
+    return write_head.load(std::memory_order_acquire);
+}
+
+uint64_t MemoryArena::AllocatePayload(const size_t length) {
+    return write_head.fetch_add(length, std::memory_order_relaxed);
 }

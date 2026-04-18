@@ -30,7 +30,7 @@ grpc::Status SemanticServiceImpl::CheckCache(
         int64_t reusable_node_id = -1;
 
         for (size_t i = 0; i < engine::L0_MAX_SLOTS; ++i) {
-            auto& curr_node = memory_arena.getL0Node(i);
+            auto& curr_node = memory_arena.GetL0Node(i);
             const auto curr_state = static_cast<NodeState>(
                 curr_node.state.load(std::memory_order_acquire));
 
@@ -63,3 +63,9 @@ grpc::Status SemanticServiceImpl::CheckCache(
                 "[Vector Engine] Unknown Fatal error"};
     }
 }
+
+uint64_t SemanticServiceImpl::WriteRingBuffer(const uint8_t* payload,
+                                              size_t length) {}
+
+bool SemanticServiceImpl::SetCache(uint32_t node_id,
+                                   const std::string& payload) {}

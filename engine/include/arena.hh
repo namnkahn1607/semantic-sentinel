@@ -31,8 +31,11 @@ public:
     MemoryArena(const MemoryArena&) = delete;
     MemoryArena& operator=(const MemoryArena&) = delete;
 
-    [[nodiscard]] inline MetaNode& getL0Node(size_t i) const;
-    [[nodiscard]] inline MetaNode& getL1Node(size_t i) const;
+    [[nodiscard]] inline MetaNode& GetL0Node(size_t i) const;
+    [[nodiscard]] inline MetaNode& GetL1Node(size_t i) const;
+    [[nodiscard]] inline uint64_t GetWriteHead() const;
+
+    inline uint64_t AllocatePayload(size_t length);
 
 private:
     // Vector Arena
