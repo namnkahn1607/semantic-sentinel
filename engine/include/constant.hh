@@ -6,6 +6,9 @@
 #define SENTINEL_ENGINE_CONSTANT_HH
 
 namespace engine {
+inline constexpr int64_t G_SHUTDOWN_TIMEOUT = 5;
+inline constexpr int64_t MAIN_THREAD_BLOCKED_ROUTINE = 100;
+
 inline constexpr size_t VECTOR_DIM = 384;
 inline constexpr size_t VECTOR_MEMSIZE = VECTOR_DIM * sizeof(float);
 

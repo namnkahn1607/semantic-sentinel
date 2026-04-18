@@ -1,8 +1,18 @@
 #include <grpcpp/grpcpp.h>
 
+#include <csignal>
+#include <thread>
+
 #include "arena.hh"
+#include "constant.hh"
 #include "proto/sentinel.grpc.pb.h"
 #include "service.hh"
+
+std::atomic g_shutdown_requested{false};
+
+void SignalHandler([[maybe_unused]] const int sig) {
+    g_shutdown_requested.store(true, std::memory_order_relaxed);
+}
 
 void RunServer(MemoryArena& arena) {
     const std::string server_address{"unix:///tmp/sentinel.sock"};
@@ -21,19 +31,38 @@ void RunServer(MemoryArena& arena) {
         grpc::InsecureServerCredentials());  // no TLS encryption
     builder.RegisterService(&service);
 
-    // Force Linux creating a physical file (socket) at server_address
+    // Force UNIX to create a physical file (socket) at server_address
     // and bind() C++ process to it.
     const std::unique_ptr server(builder.BuildAndStart());
 
-    // A daemon (background) process is not allowed to end main().
-    // Call Wait() to lock main thread, releasing CPU for gRPC workers to
-    // work on data traveling through the socket.
-    server->Wait();
+    // Call Wait() on another thread to avoid blocking Main Thread.
+    std::thread grpc_thread([&]() { server->Wait(); });
+
+    // Main Thread will be blocked after an amount of time, enabling
+    // the spawned thread calling Wait() to be executed.
+    while (!g_shutdown_requested.load(std::memory_order_relaxed)) {
+        std::this_thread::sleep_for(
+            std::chrono::milliseconds(engine::MAIN_THREAD_BLOCKED_ROUTINE));
+    }
+
+    const auto deadline = std::chrono::system_clock::now() +
+                          std::chrono::seconds(engine::G_SHUTDOWN_TIMEOUT);
+    // Shutdown() will stop receiving gRPC requests on calling,
+    // and close the server once deadline is met.
+    server->Shutdown(deadline);
+
+    // Main Thread waits for all workers to finish before closing.
+    if (grpc_thread.joinable()) {
+        grpc_thread.join();
+    }
 }
 
 int main() {
     // Main Thread is responsible for construct & deconstruct Memory Arena.
     const auto memory_arena = std::make_unique<MemoryArena>();
+
+    std::signal(SIGINT, SignalHandler);
+    std::signal(SIGTERM, SignalHandler);
 
     std::cout << "[Vector Engine] Opening to gRPC..." << std::endl;
     RunServer(*memory_arena);
