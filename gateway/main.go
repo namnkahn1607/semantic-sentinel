@@ -26,7 +26,7 @@ const (
 
 	funcWupTimeout        = 50 * time.Millisecond
 	coldSrtTimeout        = 100 * time.Millisecond
-	serverShutdownTimeout = 5 * time.Second
+	serverShutdownTimeout = 3 * time.Second
 
 	// 256MB L1 Fast Cache maximal size in memory
 	maxL1CacheSize = 256 * 1024 * 1024
