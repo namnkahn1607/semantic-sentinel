@@ -30,15 +30,21 @@ MemoryArena::MemoryArena() : write_head(0) {
     std::memset(buffer_payload, 0, engine::BUFFER_PAYLOAD_SIZE);
 
     for (size_t i = 0; i < engine::L0_MAX_SLOTS; ++i) {
-        l0_metadata[i].state.store(0, std::memory_order_relaxed);
+        l0_metadata[i].state.store(NodeState::DEAD, std::memory_order_relaxed);
+        l0_metadata[i].ref_bit.store(EvictState::COLD,
+                                     std::memory_order_relaxed);
         l0_metadata[i].created_at.store(0, std::memory_order_relaxed);
         l0_metadata[i].payload_offset.store(0, std::memory_order_relaxed);
+        l0_metadata[i].payload_length.store(0, std::memory_order_relaxed);
     }
 
     for (size_t i = 0; i < engine::L1_MAX_SLOTS; ++i) {
-        l1_metadata[i].state.store(0, std::memory_order_relaxed);
+        l1_metadata[i].state.store(NodeState::DEAD, std::memory_order_relaxed);
+        l1_metadata[i].ref_bit.store(EvictState::COLD,
+                                     std::memory_order_relaxed);
         l1_metadata[i].created_at.store(0, std::memory_order_relaxed);
         l1_metadata[i].payload_offset.store(0, std::memory_order_relaxed);
+        l1_metadata[i].payload_length.store(0, std::memory_order_relaxed);
     }
 
     std::cout << "[Vector Engine] Initialized Dual Memory Arena" << std::endl;

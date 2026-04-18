@@ -7,19 +7,23 @@
 
 #include <atomic>
 
-// Avoid False Sharing using alignas(64) since cache line size for
-// almost all modern x86 AMD and Intel CPUs is 64 bytes.
-struct alignas(64) MetaNode {
-    std::atomic<uint8_t> state;
-    std::atomic<uint64_t> created_at;
-    std::atomic<uint64_t> payload_offset;
-};
-
 enum class NodeState : uint8_t {
     DEAD = 0,
     PENDING = 1,
     READY = 2,
     MIGRATING = 3
+};
+
+enum class EvictState : uint8_t { COLD = 0, HOT = 1 };
+
+// Avoid False Sharing using alignas(64) since cache line size for
+// almost all modern x86 AMD and Intel CPUs is 64 bytes.
+struct alignas(64) MetaNode {
+    std::atomic<NodeState> state;
+    std::atomic<EvictState> ref_bit;
+    std::atomic<uint64_t> created_at;
+    std::atomic<uint64_t> payload_offset;
+    std::atomic<uint64_t> payload_length;
 };
 
 class MemoryArena {
