@@ -16,14 +16,16 @@ public:
     // No Copy/Move constructor
     SemanticServiceImpl(const SemanticServiceImpl&) = delete;
 
+    // The READ gRPC method
     grpc::Status CheckCache(grpc::ServerContext* context,
                             const proto::CheckCacheRequest* request,
                             proto::CheckCacheResponse* response) override;
 
-    uint64_t WriteRingBuffer(const uint8_t* payload, size_t length);
+    uint64_t WriteRingBuffer(const uint8_t* payload, size_t length) const;
 
-    // Future gRPC method
-    bool SetCache(uint32_t node_id, const std::string& payload);
+    // The 'future' WRITE gRPC method
+    [[nodiscard]] bool SetCache(uint64_t node_id,
+                                const std::string& payload) const;
 
 private:
     MemoryArena& memory_arena;

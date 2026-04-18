@@ -64,8 +64,37 @@ grpc::Status SemanticServiceImpl::CheckCache(
     }
 }
 
-uint64_t SemanticServiceImpl::WriteRingBuffer(const uint8_t* payload,
-                                              size_t length) {}
+bool SemanticServiceImpl::SetCache(const uint64_t node_id,
+                                   const std::string& payload) const {
+    const uint64_t new_offset = WriteRingBuffer(
+        reinterpret_cast<const uint8_t*>(payload.data()), payload.length());
 
-bool SemanticServiceImpl::SetCache(uint32_t node_id,
-                                   const std::string& payload) {}
+    uint64_t expected_offset =
+        memory_arena.GetL0Node(node_id).payload_offset.load(
+            std::memory_order_relaxed);
+
+    return memory_arena.GetL0Node(node_id)
+        .payload_offset.compare_exchange_strong(expected_offset, new_offset,
+                                                std::memory_order_release,
+                                                std::memory_order_relaxed);
+}
+
+uint64_t SemanticServiceImpl::WriteRingBuffer(const uint8_t* payload,
+                                              const size_t length) const {
+    const uint64_t offset = memory_arena.AllocatePayload(length);
+    const uint64_t index = offset & (engine::BUFFER_PAYLOAD_SIZE - 1);
+
+    if (const size_t space_until_end = engine::BUFFER_PAYLOAD_SIZE - index;
+        length < space_until_end) {
+        std::memcpy(memory_arena.GetBufferPayload() + index, payload, length);
+    } else {
+        const size_t chunk1_size = engine::BUFFER_PAYLOAD_SIZE - index;
+        const size_t chunk2_size = length - chunk1_size;
+        std::memcpy(memory_arena.GetBufferPayload() + index, payload,
+                    chunk1_size);
+        std::memcpy(memory_arena.GetBufferPayload(), payload + chunk1_size,
+                    chunk2_size);
+    }
+
+    return offset;
+}

@@ -61,6 +61,10 @@ MetaNode& MemoryArena::GetL1Node(const size_t i) const {
     return l1_metadata[i];
 }
 
+uint8_t* MemoryArena::GetBufferPayload() const {
+    return buffer_payload;
+}
+
 uint64_t MemoryArena::GetWriteHead() const {
     return write_head.load(std::memory_order_acquire);
 }

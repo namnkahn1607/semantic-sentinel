@@ -31,10 +31,13 @@ public:
     MemoryArena(const MemoryArena&) = delete;
     MemoryArena& operator=(const MemoryArena&) = delete;
 
+    // Getters
     [[nodiscard]] inline MetaNode& GetL0Node(size_t i) const;
     [[nodiscard]] inline MetaNode& GetL1Node(size_t i) const;
+    [[nodiscard]] inline uint8_t* GetBufferPayload() const;
     [[nodiscard]] inline uint64_t GetWriteHead() const;
 
+    // Setters
     inline uint64_t AllocatePayload(size_t length);
 
 private:
