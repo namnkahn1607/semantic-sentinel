@@ -41,13 +41,13 @@ func main() {
 	runtime.GOMAXPROCS(1)
 
 	if err := run(); err != nil {
-		log.Fatalf("Gateway terminated: %v", err)
+		log.Fatalf("[HTTP Gateway] Gateway terminated: %v", err)
 	}
 }
 
 func run() error {
 	// 1. Initialize L1 Exact-Match Fast Cache
-	log.Printf("Allocating %dMB Off-heap Memory for L1 Exact-Match Cache...", maxL1CacheSize/(1024*1024))
+	log.Printf("[HTTP Gateway] Allocating %dMB Off-heap Memory for Exact-Match Cache...", maxL1CacheSize/(1024*1024))
 	l1Cache := fastcache.New(maxL1CacheSize)
 	defer l1Cache.Reset()
 
@@ -59,9 +59,9 @@ func run() error {
 
 	defer func() {
 		if connCloseErr := conn.Close(); connCloseErr != nil {
-			log.Printf("Connection close Error: %v\n", connCloseErr)
+			log.Printf("[HTTP Gateway] Connection close Error: %v\n", connCloseErr)
 		} else {
-			log.Printf("Closed UDS Connection.")
+			log.Printf("[HTTP Gateway] Closed UDS Connection.")
 		}
 	}()
 
@@ -69,13 +69,13 @@ func run() error {
 	clientStub := pb.NewSemanticServiceClient(conn)
 
 	// 4. High-Concurrency Warm-up routine
-	log.Println("Initiating High-Concurrency Warm-up (Thread Pool Expansion)...")
+	log.Println("[HTTP Gateway] Initiating High-Concurrency Warm-up (Thread Pool Expansion)...")
 
 	// Functional Warm-up (against gRPC's Lazy Connection)
 	pingCtx, pingCancel := context.WithTimeout(context.Background(), funcWupTimeout)
 	if _, pingErr := clientStub.CheckCache(pingCtx, &pb.CheckCacheRequest{PromptText: "warmup_signal"}); pingErr != nil {
 		pingCancel()
-		return fmt.Errorf("Vector Engine crashed on arrival: %w", pingErr)
+		return fmt.Errorf("crashed Vector Engine on arrival: %w", pingErr)
 	}
 
 	pingCancel()
@@ -93,7 +93,7 @@ func run() error {
 	}
 
 	wg.Wait()
-	log.Println("Warmup completed.")
+	log.Println("[HTTP Gateway] Warmup completed.")
 
 	// 5. Create ServeMux (Router) - register endpoint to handler function
 	mux := http.NewServeMux()
@@ -112,7 +112,7 @@ func run() error {
 	// 8. HTTP Server error channel
 	serverErrChan := make(chan error, 1)
 	go func() {
-		log.Printf("Gateway listening on %s...\n", serverPort)
+		log.Printf("[HTTP Gateway] Gateway listening on %s...\n", serverPort)
 		if serverErr := server.ListenAndServe(); serverErr != nil && !errors.Is(serverErr, http.ErrServerClosed) {
 			serverErrChan <- serverErr
 		}
@@ -121,9 +121,9 @@ func run() error {
 	// 9. Catch ONLY the first item into one of the channels
 	select {
 	case err := <-serverErrChan:
-		return fmt.Errorf("HTTP Server crashed due to:  %w", err)
+		return fmt.Errorf("[HTTP Gateway] Crashed due to:  %w", err)
 	case sig := <-sigChan:
-		log.Printf("Received signal: %v. Initiating graceful shutdown...\n", sig)
+		log.Printf("[HTTP Gateway] Received signal: %v. Initiating graceful shutdown...\n", sig)
 	}
 
 	// 10. Create context timeout - the Server waits for remaining goroutines to finish
@@ -132,9 +132,9 @@ func run() error {
 
 	// 11. Perform Server graceful shutdown
 	if shutdownErr := server.Shutdown(shutdownCtx); shutdownErr != nil {
-		return fmt.Errorf("HTTP Server shutdown failed: %w", shutdownErr)
+		return fmt.Errorf("[HTTP Gateway] Shutdown failed: %w", shutdownErr)
 	}
 
-	log.Printf("HTTP Server stopped.")
+	log.Printf("[HTTP Gateway] Server stopped.")
 	return nil
 }

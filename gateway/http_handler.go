@@ -46,7 +46,7 @@ func handleCheckCache(stub pb.SemanticServiceClient, l1Cache *fastcache.Cache) h
 		// Set max reader size of 1MB, preventing DDOS attack
 		r.Body = http.MaxBytesReader(w, r.Body, maxReaderSize)
 		if decErr := json.NewDecoder(r.Body).Decode(&apiReq); decErr != nil {
-			log.Printf("Decoding error: %v\n", decErr)
+			log.Printf("[HTTP Gateway] Decoding error: %v\n", decErr)
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
@@ -62,7 +62,7 @@ func handleCheckCache(stub pb.SemanticServiceClient, l1Cache *fastcache.Cache) h
 		if l1CachedPayload != nil {
 			w.Header().Set("Content-Type", "application/json")
 			if _, writeErr := w.Write(l1CachedPayload); writeErr != nil {
-				log.Printf("Respond Byte Writing Error: %v\n", writeErr)
+				log.Printf("[HTTP Gateway] Respond Byte Writing Error: %v\n", writeErr)
 			}
 
 			return
@@ -77,7 +77,7 @@ func handleCheckCache(stub pb.SemanticServiceClient, l1Cache *fastcache.Cache) h
 			l1Cache.Set(hashKey, mockLLMResponse)
 			w.Header().Set("Content-Type", "application/json")
 			if _, writeErr := w.Write(mockLLMResponse); writeErr != nil {
-				log.Printf("Respond Byte Writing Error: %v\n", writeErr)
+				log.Printf("[HTTP Gateway] Respond Byte Writing Error: %v\n", writeErr)
 			}
 
 			return
@@ -90,7 +90,7 @@ func handleCheckCache(stub pb.SemanticServiceClient, l1Cache *fastcache.Cache) h
 		// 7. Remote Procedure Call
 		grpcRes, rpcErr := stub.CheckCache(ctx, &pb.CheckCacheRequest{PromptText: apiReq.Prompt})
 		if rpcErr != nil {
-			log.Printf("RPC error encountered: %v\n", rpcErr)
+			log.Printf("[HTTP Gateway] RPC error encountered: %v\n", rpcErr)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -105,7 +105,7 @@ func handleCheckCache(stub pb.SemanticServiceClient, l1Cache *fastcache.Cache) h
 		// Payload buffering
 		payloadBytes, marshErr := json.Marshal(&apiRes)
 		if marshErr != nil {
-			log.Printf("Marshal Error: %v\n", marshErr)
+			log.Printf("[HTTP Gateway] Marshal Error: %v\n", marshErr)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -114,7 +114,7 @@ func handleCheckCache(stub pb.SemanticServiceClient, l1Cache *fastcache.Cache) h
 		w.Header().Set("Content-Type", "application/json")
 		// Then the payload data is sent later on.
 		if _, writeErr := w.Write(payloadBytes); writeErr != nil {
-			log.Printf("Respond Byte Writing Error: %v\n", writeErr)
+			log.Printf("[HTTP Gateway] Respond Byte Writing Error: %v\n", writeErr)
 		}
 	}
 }
