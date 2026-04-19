@@ -9,18 +9,6 @@
 
 #include "constant.hh"
 
-void MetaNode::PackInfo(const uint32_t length, const uint32_t offset) {
-    const uint32_t packed =
-        (static_cast<uint64_t>(length) << 32) | static_cast<uint64_t>(offset);
-    payload_info.store(packed, std::memory_order_relaxed);
-}
-
-void MetaNode::UnpackInfo(uint32_t& length, uint32_t& offset) const {
-    const uint64_t packed = payload_info.load(std::memory_order_acquire);
-    length = static_cast<uint32_t>(packed >> 32);
-    offset = static_cast<uint32_t>(packed & 0xFFFFFFFF);
-}
-
 MemoryArena::MemoryArena() : write_head(0), read_tail(0) {
     // Allocating metadata Node array
     l0_metadata = new MetaNode[engine::L0_MAX_SLOTS];
@@ -42,19 +30,13 @@ MemoryArena::MemoryArena() : write_head(0), read_tail(0) {
     std::memset(buffer_payload, 0, engine::BUFFER_PAYLOAD_SIZE);
 
     for (size_t i = 0; i < engine::L0_MAX_SLOTS; ++i) {
-        l0_metadata[i].state.store(NodeState::DEAD, std::memory_order_relaxed);
-        l0_metadata[i].ref_bit.store(EvictState::COLD,
-                                     std::memory_order_relaxed);
         l0_metadata[i].created_at.store(0, std::memory_order_relaxed);
-        l0_metadata[i].payload_info.store(0, std::memory_order_relaxed);
+        l0_metadata[i].control_block.store(0, std::memory_order_relaxed);
     }
 
     for (size_t i = 0; i < engine::L1_MAX_SLOTS; ++i) {
-        l1_metadata[i].state.store(NodeState::DEAD, std::memory_order_relaxed);
-        l1_metadata[i].ref_bit.store(EvictState::COLD,
-                                     std::memory_order_relaxed);
         l1_metadata[i].created_at.store(0, std::memory_order_relaxed);
-        l1_metadata[i].payload_info.store(0, std::memory_order_relaxed);
+        l1_metadata[i].control_block.store(0, std::memory_order_relaxed);
     }
 
     std::cout << "[Vector Engine] Initialized Dual Memory Arena" << std::endl;

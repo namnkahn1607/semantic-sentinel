@@ -65,7 +65,29 @@ grpc::Status SemanticServiceImpl::CheckCache(
 }
 
 bool SemanticServiceImpl::SetCache(const uint64_t node_id,
-                                   const std::string& payload) const {}
+                                   const std::string& payload) const {
+    const uint64_t new_offset = WriteRingBuffer(
+        node_id, reinterpret_cast<const uint8_t*>(payload.data()),
+        payload.length());
+    auto& [created_at, control_block] = memory_arena.GetL0Node(node_id);
+
+    const uint64_t desired_control = ControlGenerator(
+        NodeState::READY, EvictState::HOT, payload.length(), new_offset);
+    uint64_t expected_control = control_block.load(std::memory_order_relaxed);
+
+    while (true) {
+        if (static_cast<uint8_t>(expected_control >> 62) !=
+            static_cast<uint8_t>(NodeState::PENDING)) {
+            return false;
+        }
+
+        if (control_block.compare_exchange_weak(
+                expected_control, desired_control, std::memory_order_release,
+                std::memory_order_relaxed)) {
+            return true;
+        }
+    }
+}
 
 uint64_t SemanticServiceImpl::WriteRingBuffer(const uint32_t node_id,
                                               const uint8_t* payload,
