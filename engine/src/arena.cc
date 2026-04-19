@@ -9,6 +9,18 @@
 
 #include "constant.hh"
 
+void MetaNode::PackInfo(const uint32_t length, const uint32_t offset) {
+    const uint32_t packed =
+        (static_cast<uint64_t>(length) << 32) | static_cast<uint64_t>(offset);
+    payload_info.store(packed, std::memory_order_relaxed);
+}
+
+void MetaNode::UnpackInfo(uint32_t& length, uint32_t& offset) const {
+    const uint64_t packed = payload_info.load(std::memory_order_acquire);
+    length = static_cast<uint32_t>(packed >> 32);
+    offset = static_cast<uint32_t>(packed & 0xFFFFFFFF);
+}
+
 MemoryArena::MemoryArena() : write_head(0) {
     // Allocating metadata Node array
     l0_metadata = new MetaNode[engine::L0_MAX_SLOTS];

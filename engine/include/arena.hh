@@ -22,8 +22,12 @@ struct alignas(64) MetaNode {
     std::atomic<NodeState> state;
     std::atomic<EvictState> ref_bit;
     std::atomic<uint64_t> created_at;
-    std::atomic<uint64_t> payload_offset;
-    std::atomic<uint64_t> payload_length;
+
+    // 32-bit length & 32-bit offset
+    std::atomic<uint64_t> payload_info;
+
+    inline void PackInfo(uint32_t length, uint32_t offset);
+    inline void UnpackInfo(uint32_t& length, uint32_t& offset) const;
 };
 
 class MemoryArena {
