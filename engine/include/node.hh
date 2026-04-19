@@ -14,7 +14,23 @@ enum class NodeState : uint8_t {
     MIGRATING = 3
 };
 
-enum class EvictState : uint8_t { COLD = 0, HOT = 1 };
+enum class EvictState : bool { COLD = false, HOT = true };
+
+struct UnpackedControl {
+    NodeState state;
+    EvictState ref_bit;
+    uint32_t length;
+    uint32_t offset;
+};
+
+inline uint64_t ControlGenerator(NodeState state, EvictState ref_bit,
+                                 const uint64_t length, const uint64_t offset) {
+    // 0x1FFFFFFF = 29 bits mask
+    // 0xFFFFFFFF = 32 bits mask
+    return (static_cast<uint64_t>(state) << 62) |
+           (static_cast<uint64_t>(ref_bit) << 61) |
+           ((length & 0x1FFFFFFF) << 32) | (offset & 0xFFFFFFFF);
+}
 
 // Avoid False Sharing using alignas(64) since cache line size for
 // almost all modern x86 AMD and Intel CPUs is 64 bytes.
@@ -27,9 +43,16 @@ struct alignas(64) MetaNode {
     // Bits 32-60 (29 bits): Length
     // Bits 0-31  (32 bits): Offset
     std::atomic<uint64_t> control_block;
-};
 
-uint64_t ControlGenerator(NodeState state, EvictState ref_bit, uint64_t length,
-                          uint64_t offset);
+    [[nodiscard]] UnpackedControl LoadControl(
+        const std::memory_order order = std::memory_order_acquire) const {
+        const uint64_t raw = control_block.load(order);
+
+        return {static_cast<NodeState>(raw >> 62),
+                static_cast<EvictState>((raw >> 61) & 1),
+                static_cast<uint32_t>((raw >> 32) & 0x1FFFFFFF),
+                static_cast<uint32_t>(raw & 0xFFFFFFFF)};
+    }
+};
 
 #endif  // SENTINEL_ENGINE_NODE_HH

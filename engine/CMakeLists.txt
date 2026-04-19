@@ -15,7 +15,6 @@ add_executable(sentinel_engine
         src/arena.cc
         src/embedder.cc
         src/main.cpp
-        src/node.cc
         src/service.cc
         include/arena.hh
         include/constant.hh

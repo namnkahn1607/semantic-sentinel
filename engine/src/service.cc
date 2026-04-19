@@ -30,21 +30,27 @@ grpc::Status SemanticServiceImpl::CheckCache(
         int64_t reusable_node_id = -1;
 
         for (size_t i = 0; i < engine::L0_MAX_SLOTS; ++i) {
-            auto& curr_node = memory_arena.GetL0Node(i);
-            const auto curr_state =
-                curr_node.state.load(std::memory_order_acquire);
+            auto& curr_node = memory_arena.GetNode(i);
 
-            if (curr_state == NodeState::READY) {
+            if (auto [state, ref_bit, length, offset] = curr_node.LoadControl();
+                state == NodeState::READY) {
                 // TODO: AVX2 math here
-            } else if (curr_state == NodeState::PENDING) {
+            } else if (state == NodeState::PENDING) {
                 if (curr_time -
                         curr_node.created_at.load(std::memory_order_relaxed) >
                     engine::PENDING_LIFESPAN) {
-                    curr_node.state.store(NodeState::DEAD,
-                                          std::memory_order_release);
-                    reusable_node_id = static_cast<int64_t>(i);
+                    uint64_t expected =
+                        curr_node.control_block.load(std::memory_order_relaxed);
+                    const uint64_t desired = ControlGenerator(
+                        NodeState::DEAD, ref_bit, length, offset);
+
+                    if (curr_node.control_block.compare_exchange_strong(
+                            expected, desired, std::memory_order_release,
+                            std::memory_order_relaxed)) {
+                        reusable_node_id = static_cast<int64_t>(i);
+                    }
                 }
-            } else if (curr_state == NodeState::DEAD) {
+            } else if (state == NodeState::DEAD) {
                 reusable_node_id = static_cast<int64_t>(i);
             }
         }
@@ -64,15 +70,34 @@ grpc::Status SemanticServiceImpl::CheckCache(
     }
 }
 
-bool SemanticServiceImpl::SetCache(const uint64_t node_id,
+bool SemanticServiceImpl::SetCache(const uint32_t node_id,
+                                   const float* vector_data,
                                    const std::string& payload) const {
+    if (payload.length() > engine::BUFFER_PAYLOAD_SIZE) {
+        throw std::runtime_error("[Vector Engine] Oversized Payload");
+    }
+
+    const auto payload_len = static_cast<uint32_t>(payload.length());
+    auto& [created_at, control_block] = memory_arena.GetNode(node_id);
+
+    // Get current time ONCE at every SetCache() routine.
+    const auto duration = std::chrono::system_clock::now().time_since_epoch();
+    const auto secs =
+        std::chrono::duration_cast<std::chrono::seconds>(duration);
+    const auto curr_time = static_cast<uint64_t>(secs.count());
+
+    // Inject new 384-dimension vector into Vector Arena
+    std::memcpy(memory_arena.GetVector(node_id), vector_data,
+                engine::VECTOR_MEMSIZE);
+
+    // Initialize creation timestamp
+    created_at.store(curr_time, std::memory_order_relaxed);
+
     const uint64_t new_offset = WriteRingBuffer(
-        node_id, reinterpret_cast<const uint8_t*>(payload.data()),
-        payload.length());
-    auto& [created_at, control_block] = memory_arena.GetL0Node(node_id);
+        node_id, reinterpret_cast<const uint8_t*>(payload.data()), payload_len);
 
     const uint64_t desired_control = ControlGenerator(
-        NodeState::READY, EvictState::HOT, payload.length(), new_offset);
+        NodeState::READY, EvictState::HOT, payload_len, new_offset);
     uint64_t expected_control = control_block.load(std::memory_order_relaxed);
 
     while (true) {
@@ -91,18 +116,17 @@ bool SemanticServiceImpl::SetCache(const uint64_t node_id,
 
 uint64_t SemanticServiceImpl::WriteRingBuffer(const uint32_t node_id,
                                               const uint8_t* payload,
-                                              const size_t length) const {
+                                              const uint32_t length) const {
     const uint64_t header_offset = memory_arena.AllocatePayload(length);
     const uint64_t header_index =
         header_offset & (engine::BUFFER_PAYLOAD_SIZE - 1);
 
-    // Create and write payload header.
-    const PayloadHeader header{engine::VALID_IDENTIFIER, node_id,
-                               static_cast<uint32_t>(length)};
+    // Create and write payload header
+    const PayloadHeader header{engine::VALID_IDENTIFIER, node_id, length};
     std::memcpy(memory_arena.GetBufferPayload() + header_index, &header,
                 sizeof(PayloadHeader));
 
-    // Now write the payload text.
+    // Now write the payload text
     const uint64_t text_index = (header_index + sizeof(PayloadHeader)) &
                                 (engine::BUFFER_PAYLOAD_SIZE - 1);
 

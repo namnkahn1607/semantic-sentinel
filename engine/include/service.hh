@@ -20,13 +20,14 @@ public:
     grpc::Status CheckCache(grpc::ServerContext* context,
                             const proto::CheckCacheRequest* request,
                             proto::CheckCacheResponse* response) override;
-    
+
     // The 'future' WRITE gRPC method
-    [[nodiscard]] bool SetCache(uint64_t node_id,
+    [[nodiscard]] bool SetCache(uint32_t node_id, const float* vector_data,
                                 const std::string& payload) const;
 
+private:
     uint64_t WriteRingBuffer(uint32_t node_id, const uint8_t* payload,
-                             size_t length) const;
+                             uint32_t length) const;
 
 private:
     MemoryArena& memory_arena;

@@ -26,21 +26,20 @@ public:
     MemoryArena& operator=(const MemoryArena&) = delete;
 
     // Getters
-    [[nodiscard]] inline MetaNode& GetL0Node(size_t i) const;
-    [[nodiscard]] inline MetaNode& GetL1Node(size_t i) const;
+    [[nodiscard]] inline MetaNode& GetNode(size_t node_id) const;
+    [[nodiscard]] inline float* GetVector(size_t node_id) const;
+
     [[nodiscard]] inline uint8_t* GetBufferPayload() const;
     [[nodiscard]] inline uint64_t GetWriteHead() const;
     [[nodiscard]] inline uint64_t GetReadTail() const;
 
     // Setters
-    inline uint64_t AllocatePayload(size_t length);
+    uint64_t AllocatePayload(uint32_t length);
 
 private:
     // Vector Arena
-    MetaNode* l0_metadata;
-    MetaNode* l1_metadata;
-    float* l0_vectors;
-    float* l1_vectors;
+    MetaNode* metadata;
+    float* vectors;
 
     // Payload Arena
     uint8_t* buffer_payload;
