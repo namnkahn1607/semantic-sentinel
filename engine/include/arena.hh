@@ -30,6 +30,13 @@ struct alignas(64) MetaNode {
     inline void UnpackInfo(uint32_t& length, uint32_t& offset) const;
 };
 
+// 12-byte Payload Header supporting O(1) lookup to Vector Arena.
+struct alignas(4) PayloadHeader {
+    uint32_t identifier;
+    uint32_t node_id;
+    uint32_t length;
+};
+
 class MemoryArena {
 public:
     MemoryArena();
@@ -44,6 +51,7 @@ public:
     [[nodiscard]] inline MetaNode& GetL1Node(size_t i) const;
     [[nodiscard]] inline uint8_t* GetBufferPayload() const;
     [[nodiscard]] inline uint64_t GetWriteHead() const;
+    [[nodiscard]] inline uint64_t GetReadTail() const;
 
     // Setters
     inline uint64_t AllocatePayload(size_t length);
@@ -58,6 +66,7 @@ private:
     // Payload Arena
     uint8_t* buffer_payload;
     std::atomic<uint64_t> write_head;
+    std::atomic<uint64_t> read_tail;
 };
 
 #endif  // SENTINEL_ENGINE_ARENA_HH

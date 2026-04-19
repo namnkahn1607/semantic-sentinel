@@ -17,6 +17,10 @@ inline constexpr size_t L1_MAX_SLOTS = 500'000;
 inline constexpr size_t BUFFER_PAYLOAD_SIZE = 512 * 1024 * 1024;
 
 inline constexpr int64_t PENDING_LIFESPAN = 30;
+
+inline constexpr int32_t DEFAULT_IDENTIFIER = 0xDEADBEEF;
+inline constexpr size_t GC_LOW_WATERMARK = 256 * 1024 * 1024;
+inline constexpr size_t GC_HIGH_WATERMARK = 435 * 1024 * 1024;
 }  // namespace engine
 
 #endif  // SENTINEL_ENGINE_CONSTANT_HH

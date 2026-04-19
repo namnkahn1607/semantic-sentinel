@@ -21,7 +21,7 @@ void MetaNode::UnpackInfo(uint32_t& length, uint32_t& offset) const {
     offset = static_cast<uint32_t>(packed & 0xFFFFFFFF);
 }
 
-MemoryArena::MemoryArena() : write_head(0) {
+MemoryArena::MemoryArena() : write_head(0), read_tail(0) {
     // Allocating metadata Node array
     l0_metadata = new MetaNode[engine::L0_MAX_SLOTS];
     l1_metadata = new MetaNode[engine::L1_MAX_SLOTS];
@@ -46,8 +46,7 @@ MemoryArena::MemoryArena() : write_head(0) {
         l0_metadata[i].ref_bit.store(EvictState::COLD,
                                      std::memory_order_relaxed);
         l0_metadata[i].created_at.store(0, std::memory_order_relaxed);
-        l0_metadata[i].payload_offset.store(0, std::memory_order_relaxed);
-        l0_metadata[i].payload_length.store(0, std::memory_order_relaxed);
+        l0_metadata[i].payload_info.store(0, std::memory_order_relaxed);
     }
 
     for (size_t i = 0; i < engine::L1_MAX_SLOTS; ++i) {
@@ -55,8 +54,7 @@ MemoryArena::MemoryArena() : write_head(0) {
         l1_metadata[i].ref_bit.store(EvictState::COLD,
                                      std::memory_order_relaxed);
         l1_metadata[i].created_at.store(0, std::memory_order_relaxed);
-        l1_metadata[i].payload_offset.store(0, std::memory_order_relaxed);
-        l1_metadata[i].payload_length.store(0, std::memory_order_relaxed);
+        l1_metadata[i].payload_info.store(0, std::memory_order_relaxed);
     }
 
     std::cout << "[Vector Engine] Initialized Dual Memory Arena" << std::endl;
@@ -87,6 +85,41 @@ uint64_t MemoryArena::GetWriteHead() const {
     return write_head.load(std::memory_order_acquire);
 }
 
+uint64_t MemoryArena::GetReadTail() const {
+    return read_tail.load(std::memory_order_acquire);
+}
+
 uint64_t MemoryArena::AllocatePayload(const size_t length) {
-    return write_head.fetch_add(length, std::memory_order_relaxed);
+    const size_t total_size = sizeof(PayloadHeader) + length;
+    uint64_t curr_write = write_head.load(std::memory_order_relaxed);
+    uint64_t allocated_offset;
+
+    while (true) {
+        // Backpressure mechanism: System memory resource exhausted
+        if (curr_write + total_size -
+                read_tail.load(std::memory_order_relaxed) >=
+            engine::BUFFER_PAYLOAD_SIZE) {
+            throw std::runtime_error("[Vector Engine] Resource Exhausted");
+        }
+
+        const uint64_t actual_index =
+            curr_write & (engine::BUFFER_PAYLOAD_SIZE - 1);
+        uint32_t padding = 0;
+
+        // Wrap-around Payload Header protection
+        if (engine::BUFFER_PAYLOAD_SIZE - actual_index <
+            sizeof(PayloadHeader)) {
+            padding = engine::BUFFER_PAYLOAD_SIZE - actual_index;
+        }
+
+        allocated_offset = curr_write + padding;
+
+        if (const uint64_t next_write = allocated_offset + total_size;
+            write_head.compare_exchange_weak(curr_write, next_write,
+                                             std::memory_order_relaxed)) {
+            break;
+        }
+    }
+
+    return allocated_offset;
 }
