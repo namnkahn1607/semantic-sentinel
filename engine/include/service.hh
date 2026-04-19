@@ -21,7 +21,8 @@ public:
                             const proto::CheckCacheRequest* request,
                             proto::CheckCacheResponse* response) override;
 
-    uint64_t WriteRingBuffer(const uint8_t* payload, size_t length) const;
+    uint64_t WriteRingBuffer(uint32_t node_id, const uint8_t* payload,
+                             size_t length) const;
 
     // The 'future' WRITE gRPC method
     [[nodiscard]] bool SetCache(uint64_t node_id,
