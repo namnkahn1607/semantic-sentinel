@@ -23,10 +23,10 @@ inline constexpr uint32_t PENDING_LIFESPAN = 30;
 
 inline constexpr uint32_t VALID_IDENTIFIER = 0xDEADBEEF;
 
-// inline constexpr uint32_t LOW_WATERMARK_THRESHOLD = 256 * 1024 * 1024;
-// inline constexpr uint32_t LOW_GC_RATE = 10;
-// inline constexpr uint32_t HIGH_WATERMARK_THRESHOLD = 435 * 1024 * 1024;
-// inline constexpr uint32_t HIGH_GC_RATE = 1;
+inline constexpr uint32_t LOW_WATERMARK_THRESHOLD = 256 * 1024 * 1024;
+inline constexpr uint32_t LOW_GC_RATE = 10;
+inline constexpr uint32_t HIGH_WATERMARK_THRESHOLD = 435 * 1024 * 1024;
+inline constexpr uint32_t HIGH_GC_RATE = 1;
 }  // namespace engine
 
 #endif  // SENTINEL_ENGINE_CONSTANT_HH

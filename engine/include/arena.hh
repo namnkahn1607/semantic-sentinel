@@ -25,6 +25,9 @@ public:
     MemoryArena(const MemoryArena&) = delete;
     MemoryArena& operator=(const MemoryArena&) = delete;
 
+    // The Watermark Snowplow
+    void RunGarbageCollector(const std::atomic<bool>& g_shutdown_request);
+
     // Getters
     [[nodiscard]] inline MetaNode& GetNode(size_t node_id) const;
     [[nodiscard]] inline float* GetVector(size_t node_id) const;

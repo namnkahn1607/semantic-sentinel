@@ -35,6 +35,10 @@ void RunServer(MemoryArena& arena) {
     // and bind() C++ process to it.
     const std::unique_ptr server(builder.BuildAndStart());
 
+    // Run Snowplow garbage collector on a background thread.
+    std::thread gc_thread(&MemoryArena::RunGarbageCollector, &arena,
+                          std::ref(g_shutdown_requested));
+
     // Call Wait() on another thread to avoid blocking Main Thread.
     std::thread grpc_thread([&]() { server->Wait(); });
 
@@ -54,6 +58,10 @@ void RunServer(MemoryArena& arena) {
     // Main Thread waits for all workers to finish before closing.
     if (grpc_thread.joinable()) {
         grpc_thread.join();
+    }
+
+    if (gc_thread.joinable()) {
+        gc_thread.join();
     }
 }
 
