@@ -25,6 +25,7 @@ add_executable(sentinel_engine
 )
 
 target_compile_options(sentinel_engine PRIVATE
+        -mavx2 # AVX2 intrinsics enabled
         -Wall # All basic warnings
         -Wextra # More warnings
         -Wpedantic # ISO C++ is a MUST
