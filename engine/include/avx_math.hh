@@ -7,6 +7,8 @@
 
 #include <cmath>
 
+#include "constant.hh"
+
 /* AMD/Intel x86 */
 #if defined(__x86_64__) || defined(_M_X64)
 #include <immintrin.h>
@@ -54,6 +56,18 @@ inline float CosineSimilarity(const float* query, const float* node_vector) {
     sum_128 = _mm_hadd_ps(sum_128, sum_128);  // 1 duplicated float
 
     return _mm_cvtss_f32(sum_128);
+}
+
+/* Scalar Fallback */
+#else
+inline float CosineSimilarity(const float* query, const float* node_vector) {
+    float dot_product{0.0f};
+
+    for (int i = 0; i < engine::VECTOR_DIM; ++i) {
+        dot_product += query[i] * node_vector[i];
+    }
+
+    return dot_product;
 }
 
 #endif
