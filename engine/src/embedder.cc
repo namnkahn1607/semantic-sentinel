@@ -38,7 +38,7 @@ Embedder::Embedder() {
         std::make_unique<Ort::Session>(env_, model_path, session_options_);
 }
 
-std::vector<float> Embedder::Encode(const std::string& prompt) const {
+AlignedVector Embedder::Encode(const std::string& prompt) const {
     // 1. Initialize standard allocator for ONNX
     Ort::MemoryInfo mem_info{
         Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault)};
@@ -84,32 +84,40 @@ std::vector<float> Embedder::Encode(const std::string& prompt) const {
     }
 
     const auto* float_array{output_tensor.GetTensorData<float>()};
+    const size_t alloc_size = vec_dimension * sizeof(float);
+    auto query_vec =
+        AlignedVector{static_cast<float*>(std::aligned_alloc(32, alloc_size))};
+
+    if (!query_vec) {
+        throw std::bad_alloc();
+    }
+
+    float* aligned_buffer = query_vec.get();
+    std::memset(aligned_buffer, 0, engine::VECTOR_MEMSIZE);
 
     // 7. Squeeze 2D array [N][384] into [384] array using Mean Pooling
-    std::vector pooled_vector(vec_dimension, 0.0f);
-
     for (size_t i = 0; i < seq_length; ++i) {
         for (size_t j = 0; j < vec_dimension; ++j) {
-            pooled_vector[j] += float_array[i * vec_dimension + j];
+            aligned_buffer[j] += float_array[i * vec_dimension + j];
         }
     }
 
     const auto seq_len_f = static_cast<float>(seq_length);
-    for (float& val : pooled_vector) {
-        val /= seq_len_f;
+    for (size_t i = 0; i < vec_dimension; ++i) {
+        aligned_buffer[i] /= seq_len_f;
     }
 
     // 8. Perform L2 Normalization
     float sum_sq = 0.0f;
     for (size_t i = 0; i < vec_dimension; ++i) {
-        sum_sq += pooled_vector[i] * pooled_vector[i];
+        sum_sq += aligned_buffer[i] * aligned_buffer[i];
     }
 
     const float inv_magnitude{
         1.0f / std::sqrt(sum_sq)};  // Only perform square root once
     for (size_t i = 0; i < vec_dimension; ++i) {
-        pooled_vector[i] *= inv_magnitude;
+        aligned_buffer[i] *= inv_magnitude;
     }
 
-    return pooled_vector;
+    return query_vec;
 }
