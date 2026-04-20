@@ -7,23 +7,40 @@
 
 #include <cmath>
 
-// 1. AMD/Intel x86
+/* AMD/Intel x86 */
 #if defined(__x86_64__) || defined(_M_X64)
-
 #include <immintrin.h>
 
-// Cautious: both 'query' and 'node_vector' must be normalized!
 inline float CosineSimilarity(const float* query, const float* node_vector) {
-    // A 256-bit register holding eight 0.0f's
-    __m256 sum_vec = _mm256_setzero_ps();
+    // Apply 4 256-bit registers holding eight 0.0f's (unroll_factor = 4).
+    __m256 sum0 = _mm256_setzero_ps();
+    __m256 sum1 = _mm256_setzero_ps();
+    __m256 sum2 = _mm256_setzero_ps();
+    __m256 sum3 = _mm256_setzero_ps();
 
-    for (int i = 0; i < 384; i += 8) {
-        // Load 8 floats onto the register
-        const __m256 q = _mm256_load_ps(query + i);
-        const __m256 n = _mm256_load_ps(node_vector + i);
-        // Fused Multiply-Add
-        sum_vec = _mm256_fmadd_ps(q, n, sum_vec);
+    for (int i = 0; i < 384; i += 32) {
+        // Load 8 floats of 'query'
+        const __m256 q0 = _mm256_load_ps(query + i);
+        const __m256 q1 = _mm256_load_ps(query + i + 8);
+        const __m256 q2 = _mm256_load_ps(query + i + 16);
+        const __m256 q3 = _mm256_load_ps(query + i + 24);
+
+        // Load 8 floats of 'node_vector'
+        const __m256 n0 = _mm256_load_ps(node_vector + i);
+        const __m256 n1 = _mm256_load_ps(node_vector + i + 8);
+        const __m256 n2 = _mm256_load_ps(node_vector + i + 16);
+        const __m256 n3 = _mm256_load_ps(node_vector + i + 24);
+
+        // Parallelism Fused Multiply-Add (ILP)
+        sum0 = _mm256_fmadd_ps(q0, n0, sum0);
+        sum1 = _mm256_fmadd_ps(q1, n1, sum1);
+        sum2 = _mm256_fmadd_ps(q2, n2, sum2);
+        sum3 = _mm256_fmadd_ps(q3, n3, sum3);
     }
+
+    // Add into a single
+    __m256 sum_vec =
+        _mm256_add_ps(_mm256_add_ps(sum0, sum1), _mm256_add_ps(sum2, sum3));
 
     // AVX2 divides 256-bit into 2 128-bit lanes
     const __m128 sum_low = _mm256_castps256_ps128(sum_vec);
