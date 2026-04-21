@@ -71,7 +71,6 @@ grpc::Status SemanticServiceImpl::CheckCache(
 }
 
 bool SemanticServiceImpl::SetCache(const uint32_t node_id,
-                                   const float* vector_data,
                                    const std::string& payload) const {
     if (payload.length() > engine::BUFFER_PAYLOAD_SIZE) {
         throw std::runtime_error("[Vector Engine] Oversized Payload");
@@ -79,19 +78,6 @@ bool SemanticServiceImpl::SetCache(const uint32_t node_id,
 
     const auto payload_len = static_cast<uint32_t>(payload.length());
     auto& [created_at, control_block] = memory_arena.GetNode(node_id);
-
-    // Get current time ONCE at every SetCache() routine.
-    const auto duration = std::chrono::system_clock::now().time_since_epoch();
-    const auto secs =
-        std::chrono::duration_cast<std::chrono::seconds>(duration);
-    const auto curr_time = static_cast<uint64_t>(secs.count());
-
-    // Inject new 384-dimension vector into Vector Arena
-    std::memcpy(memory_arena.GetVector(node_id), vector_data,
-                engine::VECTOR_MEMSIZE);
-
-    // Initialize creation timestamp
-    created_at.store(curr_time, std::memory_order_relaxed);
 
     const uint64_t new_offset = WriteRingBuffer(
         node_id, reinterpret_cast<const uint8_t*>(payload.data()), payload_len);

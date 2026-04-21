@@ -137,26 +137,6 @@ void MemoryArena::RunGarbageCollector(
     }
 }
 
-MetaNode& MemoryArena::GetNode(const size_t node_id) const {
-    return metadata[node_id];
-}
-
-float* MemoryArena::GetVector(const size_t node_id) const {
-    return vectors + (engine::VECTOR_DIM * node_id);
-}
-
-uint8_t* MemoryArena::GetBufferPayload() const {
-    return buffer_payload;
-}
-
-uint64_t MemoryArena::GetWriteHead() const {
-    return write_head.load(std::memory_order_acquire);
-}
-
-uint64_t MemoryArena::GetReadTail() const {
-    return read_tail.load(std::memory_order_acquire);
-}
-
 uint64_t MemoryArena::AllocatePayload(const uint32_t length) {
     const size_t total_size = sizeof(PayloadHeader) + length;
     uint64_t curr_write = write_head.load(std::memory_order_relaxed);

@@ -22,7 +22,7 @@ public:
                             proto::CheckCacheResponse* response) override;
 
     // The 'future' WRITE gRPC method
-    [[nodiscard]] bool SetCache(uint32_t node_id, const float* vector_data,
+    [[nodiscard]] bool SetCache(uint32_t node_id,
                                 const std::string& payload) const;
 
 private:

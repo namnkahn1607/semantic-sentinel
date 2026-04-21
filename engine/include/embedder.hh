@@ -7,12 +7,6 @@
 
 #include <onnxruntime/onnxruntime_cxx_api.h>
 
-struct AlignedFree {
-    void operator()(void* ptr) const { std::free(ptr); }
-};
-
-using AlignedVector = std::unique_ptr<float[], AlignedFree>;
-
 class Embedder {  // Meyers Singleton
 public:
     // Remove Copy Constructor & Copy Assignment Operator

@@ -38,7 +38,7 @@ inline float CosineSimilarity(const float* query, const float* node_vector) {
         sum3 = _mm256_fmadd_ps(q3, n3, sum3);
     }
 
-    // Add into a single
+    // Add into a single 256-bit register
     __m256 sum_vec =
         _mm256_add_ps(_mm256_add_ps(sum0, sum1),   // NOLINT(*-simd-intrinsics)
                       _mm256_add_ps(sum2, sum3));  // NOLINT(*-simd-intrinsics)

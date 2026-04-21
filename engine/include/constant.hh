@@ -5,6 +5,7 @@
 #ifndef SENTINEL_ENGINE_CONSTANT_HH
 #define SENTINEL_ENGINE_CONSTANT_HH
 
+#include <cstdint>
 #include <cstdlib>
 
 namespace engine {

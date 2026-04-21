@@ -23,7 +23,7 @@ struct UnpackedControl {
     uint32_t offset;
 };
 
-inline uint64_t ControlGenerator(NodeState state, EvictState ref_bit,
+[[nodiscard]] inline uint64_t ControlGenerator(NodeState state, EvictState ref_bit,
                                  const uint64_t length, const uint64_t offset) {
     // 0x1FFFFFFF = 29 bits mask
     // 0xFFFFFFFF = 32 bits mask
@@ -44,7 +44,7 @@ struct alignas(64) MetaNode {
     // Bits 0-31  (32 bits): Offset
     std::atomic<uint64_t> control_block;
 
-    [[nodiscard]] UnpackedControl LoadControl(
+    [[nodiscard]] inline UnpackedControl LoadControl(
         const std::memory_order order = std::memory_order_acquire) const {
         const uint64_t raw = control_block.load(order);
 

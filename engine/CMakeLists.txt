@@ -21,6 +21,7 @@ add_executable(sentinel_engine
         include/constant.hh
         include/embedder.hh
         include/node.hh
+        include/raii_vector.hh
         include/service.hh
 )
 

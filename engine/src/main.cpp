@@ -5,7 +5,6 @@
 
 #include "arena.hh"
 #include "constant.hh"
-#include "proto/sentinel.grpc.pb.h"
 #include "service.hh"
 
 std::atomic g_shutdown_requested{false};
