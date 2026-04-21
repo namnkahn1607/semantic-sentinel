@@ -5,7 +5,6 @@
 #include "embedder.hh"
 
 #include "constant.hh"
-#include "raii_vector.hh"
 
 Embedder::Embedder() {
     const char* model_path{std::getenv("INFERENCE_MODEL_PATH")};

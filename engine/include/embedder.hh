@@ -6,6 +6,7 @@
 #define SENTINEL_ENGINE_EMBEDDER_HH
 
 #include <onnxruntime/onnxruntime_cxx_api.h>
+#include "raii_vector.hh"
 
 class Embedder {  // Meyers Singleton
 public:
