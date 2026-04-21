@@ -7,8 +7,6 @@
 
 #include <cmath>
 
-#include "constant.hh"
-
 /* AMD/Intel x86 */
 #if defined(__x86_64__) || defined(_M_X64)
 #include <immintrin.h>
@@ -42,14 +40,16 @@ inline float CosineSimilarity(const float* query, const float* node_vector) {
 
     // Add into a single
     __m256 sum_vec =
-        _mm256_add_ps(_mm256_add_ps(sum0, sum1), _mm256_add_ps(sum2, sum3));
+        _mm256_add_ps(_mm256_add_ps(sum0, sum1),   // NOLINT(*-simd-intrinsics)
+                      _mm256_add_ps(sum2, sum3));  // NOLINT(*-simd-intrinsics)
 
     // AVX2 divides 256-bit into 2 128-bit lanes
     const __m128 sum_low = _mm256_castps256_ps128(sum_vec);
     const auto sum_high = _mm256_extractf128_ps(sum_vec, 1);
 
     // Sum 2 128-bit lane into a 128-bit (4 floats) register
-    __m128 sum_128 = _mm_add_ps(sum_low, sum_high);
+    __m128 sum_128 =
+        _mm_add_ps(sum_low, sum_high);  // NOLINT(*-simd-intrinsics)
 
     // Continue horizontal add on that 128-bit
     sum_128 = _mm_hadd_ps(sum_128, sum_128);  // 2 floats
@@ -60,6 +60,8 @@ inline float CosineSimilarity(const float* query, const float* node_vector) {
 
 /* Scalar Fallback */
 #else
+#include "constant.hh"
+
 inline float CosineSimilarity(const float* query, const float* node_vector) {
     float dot_product{0.0f};
 
