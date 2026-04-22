@@ -6,6 +6,7 @@
 #define SENTINEL_ENGINE_EMBEDDER_HH
 
 #include <onnxruntime/onnxruntime_cxx_api.h>
+
 #include "raii_vector.hh"
 
 class Embedder {  // Meyers Singleton
@@ -16,7 +17,7 @@ public:
 
     // getInstance() now is thread-safe. If multiple calls to it are made,
     // they'll have to wait for initialization to complete.
-    static Embedder& getInstance() {
+    static Embedder& GetInstance() {
         // Only get initialization once called
         static Embedder instance;  // C++11 Magic Statics (Thread-safe local
                                    // static initialization)

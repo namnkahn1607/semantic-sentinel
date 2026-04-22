@@ -5,8 +5,6 @@
 #ifndef SENTINEL_ENGINE_AVX_MATH_HH
 #define SENTINEL_ENGINE_AVX_MATH_HH
 
-#include <cmath>
-
 /* AMD/Intel x86 */
 #if defined(__x86_64__) || defined(_M_X64)
 #include <immintrin.h>
