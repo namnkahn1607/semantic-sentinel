@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.6.1
 // - protoc             (unknown)
-// source: proto/sentinel.proto
+// source: sentinel.proto
 
 package pb
 
@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	SemanticService_CheckCache_FullMethodName = "/proto.SemanticService/CheckCache"
+	SemanticService_SetCache_FullMethodName   = "/proto.SemanticService/SetCache"
 )
 
 // SemanticServiceClient is the client API for SemanticService service.
@@ -27,6 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type SemanticServiceClient interface {
 	CheckCache(ctx context.Context, in *CheckCacheRequest, opts ...grpc.CallOption) (*CheckCacheResponse, error)
+	SetCache(ctx context.Context, in *SetCacheRequest, opts ...grpc.CallOption) (*SetCacheResponse, error)
 }
 
 type semanticServiceClient struct {
@@ -47,11 +49,22 @@ func (c *semanticServiceClient) CheckCache(ctx context.Context, in *CheckCacheRe
 	return out, nil
 }
 
+func (c *semanticServiceClient) SetCache(ctx context.Context, in *SetCacheRequest, opts ...grpc.CallOption) (*SetCacheResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetCacheResponse)
+	err := c.cc.Invoke(ctx, SemanticService_SetCache_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SemanticServiceServer is the server API for SemanticService service.
 // All implementations must embed UnimplementedSemanticServiceServer
 // for forward compatibility.
 type SemanticServiceServer interface {
 	CheckCache(context.Context, *CheckCacheRequest) (*CheckCacheResponse, error)
+	SetCache(context.Context, *SetCacheRequest) (*SetCacheResponse, error)
 	mustEmbedUnimplementedSemanticServiceServer()
 }
 
@@ -64,6 +77,9 @@ type UnimplementedSemanticServiceServer struct{}
 
 func (UnimplementedSemanticServiceServer) CheckCache(context.Context, *CheckCacheRequest) (*CheckCacheResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CheckCache not implemented")
+}
+func (UnimplementedSemanticServiceServer) SetCache(context.Context, *SetCacheRequest) (*SetCacheResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetCache not implemented")
 }
 func (UnimplementedSemanticServiceServer) mustEmbedUnimplementedSemanticServiceServer() {}
 func (UnimplementedSemanticServiceServer) testEmbeddedByValue()                         {}
@@ -104,6 +120,24 @@ func _SemanticService_CheckCache_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SemanticService_SetCache_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetCacheRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SemanticServiceServer).SetCache(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SemanticService_SetCache_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SemanticServiceServer).SetCache(ctx, req.(*SetCacheRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SemanticService_ServiceDesc is the grpc.ServiceDesc for SemanticService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -115,7 +149,11 @@ var SemanticService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "CheckCache",
 			Handler:    _SemanticService_CheckCache_Handler,
 		},
+		{
+			MethodName: "SetCache",
+			Handler:    _SemanticService_SetCache_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "proto/sentinel.proto",
+	Metadata: "sentinel.proto",
 }

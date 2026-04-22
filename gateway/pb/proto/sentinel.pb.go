@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        (unknown)
-// source: proto/sentinel.proto
+// source: sentinel.proto
 
 package pb
 
@@ -21,16 +21,68 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type CacheState int32
+
+const (
+	CacheState_CACHE_STATE_UNSPECIFIED CacheState = 0
+	CacheState_CACHE_STATE_HIT         CacheState = 1
+	CacheState_CACHE_STATE_MISS        CacheState = 2
+	CacheState_CACHE_STATE_PENDING     CacheState = 3
+)
+
+// Enum value maps for CacheState.
+var (
+	CacheState_name = map[int32]string{
+		0: "CACHE_STATE_UNSPECIFIED",
+		1: "CACHE_STATE_HIT",
+		2: "CACHE_STATE_MISS",
+		3: "CACHE_STATE_PENDING",
+	}
+	CacheState_value = map[string]int32{
+		"CACHE_STATE_UNSPECIFIED": 0,
+		"CACHE_STATE_HIT":         1,
+		"CACHE_STATE_MISS":        2,
+		"CACHE_STATE_PENDING":     3,
+	}
+)
+
+func (x CacheState) Enum() *CacheState {
+	p := new(CacheState)
+	*p = x
+	return p
+}
+
+func (x CacheState) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CacheState) Descriptor() protoreflect.EnumDescriptor {
+	return file_sentinel_proto_enumTypes[0].Descriptor()
+}
+
+func (CacheState) Type() protoreflect.EnumType {
+	return &file_sentinel_proto_enumTypes[0]
+}
+
+func (x CacheState) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CacheState.Descriptor instead.
+func (CacheState) EnumDescriptor() ([]byte, []int) {
+	return file_sentinel_proto_rawDescGZIP(), []int{0}
+}
+
 type CheckCacheRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	PromptText    string                 `protobuf:"bytes,1,opt,name=prompt_text,json=promptText,proto3" json:"prompt_text,omitempty"`
+	Prompt        string                 `protobuf:"bytes,1,opt,name=prompt,proto3" json:"prompt,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CheckCacheRequest) Reset() {
 	*x = CheckCacheRequest{}
-	mi := &file_proto_sentinel_proto_msgTypes[0]
+	mi := &file_sentinel_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -42,7 +94,7 @@ func (x *CheckCacheRequest) String() string {
 func (*CheckCacheRequest) ProtoMessage() {}
 
 func (x *CheckCacheRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_sentinel_proto_msgTypes[0]
+	mi := &file_sentinel_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -55,28 +107,28 @@ func (x *CheckCacheRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckCacheRequest.ProtoReflect.Descriptor instead.
 func (*CheckCacheRequest) Descriptor() ([]byte, []int) {
-	return file_proto_sentinel_proto_rawDescGZIP(), []int{0}
+	return file_sentinel_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *CheckCacheRequest) GetPromptText() string {
+func (x *CheckCacheRequest) GetPrompt() string {
 	if x != nil {
-		return x.PromptText
+		return x.Prompt
 	}
 	return ""
 }
 
 type CheckCacheResponse struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	IsHit           bool                   `protobuf:"varint,1,opt,name=is_hit,json=isHit,proto3" json:"is_hit,omitempty"`
-	CachedPayload   string                 `protobuf:"bytes,2,opt,name=cached_payload,json=cachedPayload,proto3" json:"cached_payload,omitempty"`
-	SimilarityScore float32                `protobuf:"fixed32,3,opt,name=similarity_score,json=similarityScore,proto3" json:"similarity_score,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CheckState    CacheState             `protobuf:"varint,1,opt,name=check_state,json=checkState,proto3,enum=proto.CacheState" json:"check_state,omitempty"`
+	NodeId        int32                  `protobuf:"varint,2,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`                     // -1 if HIT, otherwise > -1
+	CachedPayload string                 `protobuf:"bytes,3,opt,name=cached_payload,json=cachedPayload,proto3" json:"cached_payload,omitempty"` // empty if MISS or PENDING_HIT
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CheckCacheResponse) Reset() {
 	*x = CheckCacheResponse{}
-	mi := &file_proto_sentinel_proto_msgTypes[1]
+	mi := &file_sentinel_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -88,7 +140,7 @@ func (x *CheckCacheResponse) String() string {
 func (*CheckCacheResponse) ProtoMessage() {}
 
 func (x *CheckCacheResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_sentinel_proto_msgTypes[1]
+	mi := &file_sentinel_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -101,14 +153,21 @@ func (x *CheckCacheResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckCacheResponse.ProtoReflect.Descriptor instead.
 func (*CheckCacheResponse) Descriptor() ([]byte, []int) {
-	return file_proto_sentinel_proto_rawDescGZIP(), []int{1}
+	return file_sentinel_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *CheckCacheResponse) GetIsHit() bool {
+func (x *CheckCacheResponse) GetCheckState() CacheState {
 	if x != nil {
-		return x.IsHit
+		return x.CheckState
 	}
-	return false
+	return CacheState_CACHE_STATE_UNSPECIFIED
+}
+
+func (x *CheckCacheResponse) GetNodeId() int32 {
+	if x != nil {
+		return x.NodeId
+	}
+	return 0
 }
 
 func (x *CheckCacheResponse) GetCachedPayload() string {
@@ -118,76 +177,185 @@ func (x *CheckCacheResponse) GetCachedPayload() string {
 	return ""
 }
 
-func (x *CheckCacheResponse) GetSimilarityScore() float32 {
+type SetCacheRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	NodeId          int32                  `protobuf:"varint,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	UncachedPayload string                 `protobuf:"bytes,2,opt,name=uncached_payload,json=uncachedPayload,proto3" json:"uncached_payload,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *SetCacheRequest) Reset() {
+	*x = SetCacheRequest{}
+	mi := &file_sentinel_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetCacheRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetCacheRequest) ProtoMessage() {}
+
+func (x *SetCacheRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_sentinel_proto_msgTypes[2]
 	if x != nil {
-		return x.SimilarityScore
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetCacheRequest.ProtoReflect.Descriptor instead.
+func (*SetCacheRequest) Descriptor() ([]byte, []int) {
+	return file_sentinel_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *SetCacheRequest) GetNodeId() int32 {
+	if x != nil {
+		return x.NodeId
 	}
 	return 0
 }
 
-var File_proto_sentinel_proto protoreflect.FileDescriptor
+func (x *SetCacheRequest) GetUncachedPayload() string {
+	if x != nil {
+		return x.UncachedPayload
+	}
+	return ""
+}
 
-const file_proto_sentinel_proto_rawDesc = "" +
+type SetCacheResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetCacheResponse) Reset() {
+	*x = SetCacheResponse{}
+	mi := &file_sentinel_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetCacheResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetCacheResponse) ProtoMessage() {}
+
+func (x *SetCacheResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_sentinel_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetCacheResponse.ProtoReflect.Descriptor instead.
+func (*SetCacheResponse) Descriptor() ([]byte, []int) {
+	return file_sentinel_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *SetCacheResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+var File_sentinel_proto protoreflect.FileDescriptor
+
+const file_sentinel_proto_rawDesc = "" +
 	"\n" +
-	"\x14proto/sentinel.proto\x12\x05proto\"4\n" +
-	"\x11CheckCacheRequest\x12\x1f\n" +
-	"\vprompt_text\x18\x01 \x01(\tR\n" +
-	"promptText\"}\n" +
-	"\x12CheckCacheResponse\x12\x15\n" +
-	"\x06is_hit\x18\x01 \x01(\bR\x05isHit\x12%\n" +
-	"\x0ecached_payload\x18\x02 \x01(\tR\rcachedPayload\x12)\n" +
-	"\x10similarity_score\x18\x03 \x01(\x02R\x0fsimilarityScore2T\n" +
+	"\x0esentinel.proto\x12\x05proto\"+\n" +
+	"\x11CheckCacheRequest\x12\x16\n" +
+	"\x06prompt\x18\x01 \x01(\tR\x06prompt\"\x88\x01\n" +
+	"\x12CheckCacheResponse\x122\n" +
+	"\vcheck_state\x18\x01 \x01(\x0e2\x11.proto.CacheStateR\n" +
+	"checkState\x12\x17\n" +
+	"\anode_id\x18\x02 \x01(\x05R\x06nodeId\x12%\n" +
+	"\x0ecached_payload\x18\x03 \x01(\tR\rcachedPayload\"U\n" +
+	"\x0fSetCacheRequest\x12\x17\n" +
+	"\anode_id\x18\x01 \x01(\x05R\x06nodeId\x12)\n" +
+	"\x10uncached_payload\x18\x02 \x01(\tR\x0funcachedPayload\",\n" +
+	"\x10SetCacheResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess*m\n" +
+	"\n" +
+	"CacheState\x12\x1b\n" +
+	"\x17CACHE_STATE_UNSPECIFIED\x10\x00\x12\x13\n" +
+	"\x0fCACHE_STATE_HIT\x10\x01\x12\x14\n" +
+	"\x10CACHE_STATE_MISS\x10\x02\x12\x17\n" +
+	"\x13CACHE_STATE_PENDING\x10\x032\x91\x01\n" +
 	"\x0fSemanticService\x12A\n" +
 	"\n" +
-	"CheckCache\x12\x18.proto.CheckCacheRequest\x1a\x19.proto.CheckCacheResponseB\x15Z\x13sentinel/gateway/pbb\x06proto3"
+	"CheckCache\x12\x18.proto.CheckCacheRequest\x1a\x19.proto.CheckCacheResponse\x12;\n" +
+	"\bSetCache\x12\x16.proto.SetCacheRequest\x1a\x17.proto.SetCacheResponseB\x15Z\x13sentinel/gateway/pbb\x06proto3"
 
 var (
-	file_proto_sentinel_proto_rawDescOnce sync.Once
-	file_proto_sentinel_proto_rawDescData []byte
+	file_sentinel_proto_rawDescOnce sync.Once
+	file_sentinel_proto_rawDescData []byte
 )
 
-func file_proto_sentinel_proto_rawDescGZIP() []byte {
-	file_proto_sentinel_proto_rawDescOnce.Do(func() {
-		file_proto_sentinel_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_sentinel_proto_rawDesc), len(file_proto_sentinel_proto_rawDesc)))
+func file_sentinel_proto_rawDescGZIP() []byte {
+	file_sentinel_proto_rawDescOnce.Do(func() {
+		file_sentinel_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_sentinel_proto_rawDesc), len(file_sentinel_proto_rawDesc)))
 	})
-	return file_proto_sentinel_proto_rawDescData
+	return file_sentinel_proto_rawDescData
 }
 
-var file_proto_sentinel_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
-var file_proto_sentinel_proto_goTypes = []any{
-	(*CheckCacheRequest)(nil),  // 0: proto.CheckCacheRequest
-	(*CheckCacheResponse)(nil), // 1: proto.CheckCacheResponse
+var file_sentinel_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_sentinel_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_sentinel_proto_goTypes = []any{
+	(CacheState)(0),            // 0: proto.CacheState
+	(*CheckCacheRequest)(nil),  // 1: proto.CheckCacheRequest
+	(*CheckCacheResponse)(nil), // 2: proto.CheckCacheResponse
+	(*SetCacheRequest)(nil),    // 3: proto.SetCacheRequest
+	(*SetCacheResponse)(nil),   // 4: proto.SetCacheResponse
 }
-var file_proto_sentinel_proto_depIdxs = []int32{
-	0, // 0: proto.SemanticService.CheckCache:input_type -> proto.CheckCacheRequest
-	1, // 1: proto.SemanticService.CheckCache:output_type -> proto.CheckCacheResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+var file_sentinel_proto_depIdxs = []int32{
+	0, // 0: proto.CheckCacheResponse.check_state:type_name -> proto.CacheState
+	1, // 1: proto.SemanticService.CheckCache:input_type -> proto.CheckCacheRequest
+	3, // 2: proto.SemanticService.SetCache:input_type -> proto.SetCacheRequest
+	2, // 3: proto.SemanticService.CheckCache:output_type -> proto.CheckCacheResponse
+	4, // 4: proto.SemanticService.SetCache:output_type -> proto.SetCacheResponse
+	3, // [3:5] is the sub-list for method output_type
+	1, // [1:3] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
-func init() { file_proto_sentinel_proto_init() }
-func file_proto_sentinel_proto_init() {
-	if File_proto_sentinel_proto != nil {
+func init() { file_sentinel_proto_init() }
+func file_sentinel_proto_init() {
+	if File_sentinel_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_sentinel_proto_rawDesc), len(file_proto_sentinel_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   2,
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_sentinel_proto_rawDesc), len(file_sentinel_proto_rawDesc)),
+			NumEnums:      1,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_proto_sentinel_proto_goTypes,
-		DependencyIndexes: file_proto_sentinel_proto_depIdxs,
-		MessageInfos:      file_proto_sentinel_proto_msgTypes,
+		GoTypes:           file_sentinel_proto_goTypes,
+		DependencyIndexes: file_sentinel_proto_depIdxs,
+		EnumInfos:         file_sentinel_proto_enumTypes,
+		MessageInfos:      file_sentinel_proto_msgTypes,
 	}.Build()
-	File_proto_sentinel_proto = out.File
-	file_proto_sentinel_proto_goTypes = nil
-	file_proto_sentinel_proto_depIdxs = nil
+	File_sentinel_proto = out.File
+	file_sentinel_proto_goTypes = nil
+	file_sentinel_proto_depIdxs = nil
 }
