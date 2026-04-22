@@ -28,9 +28,9 @@ type CheckCacheAPIRequest struct {
 }
 
 type CheckCacheAPIResponse struct {
-	IsHit           bool    `json:"is_hit"`
-	CachePayload    string  `json:"cache_payload"`
-	SimilarityScore float64 `json:"similarity_score"`
+	CheckState    pb.CacheState `json:"check_state"`
+	NodeID        int32         `json:"node_id"`
+	CachedPayload string        `json:"cached_payload"`
 }
 
 func handleCheckCache(stub pb.SemanticServiceClient, l1Cache *fastcache.Cache) http.HandlerFunc {
@@ -88,7 +88,7 @@ func handleCheckCache(stub pb.SemanticServiceClient, l1Cache *fastcache.Cache) h
 		defer cancel()
 
 		// 7. Remote Procedure Call
-		grpcRes, rpcErr := stub.CheckCache(ctx, &pb.CheckCacheRequest{PromptText: apiReq.Prompt})
+		grpcRes, rpcErr := stub.CheckCache(ctx, &pb.CheckCacheRequest{Prompt: apiReq.Prompt})
 		if rpcErr != nil {
 			log.Printf("[HTTP Gateway] RPC error encountered: %v\n", rpcErr)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -97,9 +97,9 @@ func handleCheckCache(stub pb.SemanticServiceClient, l1Cache *fastcache.Cache) h
 
 		// 8. Encode Request (into JSON)
 		apiRes := CheckCacheAPIResponse{
-			IsHit:           grpcRes.GetIsHit(),
-			CachePayload:    grpcRes.GetCachedPayload(),
-			SimilarityScore: float64(grpcRes.GetSimilarityScore()),
+			CheckState:    grpcRes.GetCheckState(),
+			NodeID:        grpcRes.GetNodeId(),
+			CachedPayload: grpcRes.GetCachedPayload(),
 		}
 
 		// Payload buffering

@@ -73,7 +73,7 @@ func run() error {
 
 	// Functional Warm-up (against gRPC's Lazy Connection)
 	pingCtx, pingCancel := context.WithTimeout(context.Background(), funcWupTimeout)
-	if _, pingErr := clientStub.CheckCache(pingCtx, &pb.CheckCacheRequest{PromptText: "warmup_signal"}); pingErr != nil {
+	if _, pingErr := clientStub.CheckCache(pingCtx, &pb.CheckCacheRequest{Prompt: "warmup_signal"}); pingErr != nil {
 		pingCancel()
 		return fmt.Errorf("crashed Vector Engine on arrival: %w", pingErr)
 	}
@@ -83,13 +83,11 @@ func run() error {
 	// Cold start Warm-up (100 requests in 100 Goroutines simultaneously)
 	var wg sync.WaitGroup
 	for range warmUpConcurrency {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			burstCtx, burstCancel := context.WithTimeout(context.Background(), coldSrtTimeout)
 			defer burstCancel()
-			_, _ = clientStub.CheckCache(burstCtx, &pb.CheckCacheRequest{PromptText: "warmup_burst"})
-		}()
+			_, _ = clientStub.CheckCache(burstCtx, &pb.CheckCacheRequest{Prompt: "warmup_burst"})
+		})
 	}
 
 	wg.Wait()
