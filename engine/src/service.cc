@@ -42,7 +42,7 @@ grpc::Status SemanticServiceImpl::CheckCache(
             auto& [created_at, control_block] = memory_arena.GetNode(i);
             const uint64_t best_ctrl =
                 control_block.load(std::memory_order_relaxed);
-            const auto state = static_cast<NodeState>(best_ctrl >> 62);
+            auto [state, ref_bit, length, offset] = UnpackControl(best_ctrl);
 
             reusable_node_id =
                 (state == NodeState::DEAD && reusable_node_id == -1)
@@ -57,7 +57,7 @@ grpc::Status SemanticServiceImpl::CheckCache(
                     control_block.load(std::memory_order_acquire);
                 if (birth_time != 0) {
                     if (curr_time - birth_time > engine::PENDING_LIFESPAN) {
-                        const uint64_t expected_ctrl = best_ctrl;
+                        uint64_t expected_ctrl = best_ctrl;
                         const uint64_t desired_ctrl = PackControl(
                             NodeState::DEAD, ref_bit, length, offset);
 
