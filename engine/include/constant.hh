@@ -14,6 +14,7 @@ inline constexpr uint32_t MAIN_THREAD_BLOCKED_ROUTINE = 100;
 
 inline constexpr size_t VECTOR_DIM = 384;
 inline constexpr size_t VECTOR_MEMSIZE = VECTOR_DIM * sizeof(float);
+inline constexpr float SIMILARITY_THRESHOLD = 0.85f;
 
 inline constexpr size_t L0_MAX_SLOTS = 1'000;
 inline constexpr size_t L1_MAX_SLOTS = 500'000;

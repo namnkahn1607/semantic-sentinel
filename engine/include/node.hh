@@ -23,15 +23,21 @@ struct UnpackedControl {
     uint32_t offset;
 };
 
-[[nodiscard]] inline uint64_t ControlGenerator(NodeState state,
-                                               EvictState ref_bit,
-                                               const uint64_t length,
-                                               const uint64_t offset) {
+[[nodiscard]] inline uint64_t PackControl(NodeState state, EvictState ref_bit,
+                                          const uint64_t length,
+                                          const uint64_t offset) {
     // 0x1FFFFFFF = 29 bits mask
     // 0xFFFFFFFF = 32 bits mask
     return (static_cast<uint64_t>(state) << 62) |
            (static_cast<uint64_t>(ref_bit) << 61) |
            ((length & 0x1FFFFFFF) << 32) | (offset & 0xFFFFFFFF);
+}
+
+[[nodiscard]] inline UnpackedControl UnpackControl(const uint64_t control) {
+    return {static_cast<NodeState>((control >> 62) & 0x3),
+            static_cast<EvictState>((control >> 61) & 0x1),
+            static_cast<uint32_t>((control >> 32) & 0x1FFFFFFF),
+            static_cast<uint32_t>(control & 0xFFFFFFFF)};
 }
 
 // Avoid False Sharing using alignas(64) since cache line size for

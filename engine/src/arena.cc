@@ -83,7 +83,8 @@ void MemoryArena::RunGarbageCollector(
         MetaNode& node = metadata[node_id];
         auto [state, ref_bit, length, offset] = node.LoadControl();
 
-        if (state == NodeState::DEAD || offset != tail) {
+        if (state == NodeState::DEAD ||
+            offset != static_cast<uint32_t>(tail & 0xFFFFFFFF)) {
             read_tail.fetch_add(total_size, std::memory_order_relaxed);
             continue;
         }
@@ -91,13 +92,15 @@ void MemoryArena::RunGarbageCollector(
         if (ref_bit == EvictState::COLD) {
             // Evict in case encountering cold node
             uint64_t expected_ctrl =
-                ControlGenerator(state, ref_bit, length, offset);
+                PackControl(state, ref_bit, length, offset);
             const uint64_t desired_ctrl =
-                ControlGenerator(NodeState::DEAD, ref_bit, length, offset);
+                PackControl(NodeState::DEAD, ref_bit, length, offset);
 
             node.control_block.compare_exchange_weak(
                 expected_ctrl, desired_ctrl, std::memory_order_release,
                 std::memory_order_relaxed);
+
+            node.created_at.store(0, std::memory_order_relaxed);
         } else {
             // Perform payload rescue & give it a Second chance
             // if the node is still hot.
@@ -123,9 +126,9 @@ void MemoryArena::RunGarbageCollector(
             }
 
             uint64_t expected_ctrl =
-                ControlGenerator(state, EvictState::HOT, length, offset);
-            const uint64_t desired_ctrl = ControlGenerator(
-                state, EvictState::COLD, length, rescued_offset);
+                PackControl(state, EvictState::HOT, length, offset);
+            const uint64_t desired_ctrl =
+                PackControl(state, EvictState::COLD, length, rescued_offset);
 
             node.control_block.compare_exchange_strong(
                 expected_ctrl, desired_ctrl, std::memory_order_release,
@@ -147,7 +150,7 @@ uint64_t MemoryArena::AllocatePayload(const uint32_t length) {
         if (curr_write + total_size -
                 read_tail.load(std::memory_order_relaxed) >=
             engine::BUFFER_PAYLOAD_SIZE) {
-            throw std::runtime_error("[Vector Engine] Resource Exhausted");
+            throw std::runtime_error("Resource Exhausted");
         }
 
         const uint64_t actual_index =

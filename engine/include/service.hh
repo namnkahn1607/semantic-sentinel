@@ -21,16 +21,19 @@ public:
                             const proto::CheckCacheRequest* request,
                             proto::CheckCacheResponse* response) override;
 
-    // The 'future' WRITE gRPC method
-    [[nodiscard]] bool SetCache(uint32_t node_id,
-                                const std::string& payload) const;
-
-private:
-    uint64_t WriteRingBuffer(uint32_t node_id, const uint8_t* payload,
-                             uint32_t length) const;
+    // The WRITE gRPC method
+    grpc::Status SetCache(grpc::ServerContext* context,
+                          const proto::SetCacheRequest* request,
+                          proto::SetCacheResponse* response) override;
 
 private:
     MemoryArena& memory_arena;
+
+    void ReadPayload(uint32_t offset, uint32_t length,
+                        std::string* out_payload) const;
+
+    uint64_t WritePayload(uint32_t node_id, const uint8_t* in_payload,
+                             uint32_t length) const;
 };
 
 #endif  // SENTINEL_ENGINE_SERVICE_HH
