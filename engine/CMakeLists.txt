@@ -51,5 +51,5 @@ target_link_libraries(sentinel_core PUBLIC
 )
 
 # Total Executable
-add_executable(sentinel_engine src/main.cpp)
+add_executable(sentinel_engine src/main.cc)
 target_link_libraries(sentinel_engine PRIVATE sentinel_core)
