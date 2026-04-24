@@ -9,13 +9,15 @@ find_package(Protobuf CONFIG REQUIRED)
 find_package(gRPC CONFIG REQUIRED)
 find_package(onnxruntime CONFIG REQUIRED)
 
-add_executable(sentinel_engine
+add_library(sentinel_core STATIC
+        # gRPC stubs files
         pb/proto/sentinel.pb.cc
         pb/proto/sentinel.grpc.pb.cc
+        # Source files
         src/arena.cc
         src/embedder.cc
-        src/main.cpp
         src/service.cc
+        # Header files
         include/arena.hh
         include/avx_math.hh
         include/constant.hh
@@ -25,7 +27,7 @@ add_executable(sentinel_engine
         include/service.hh
 )
 
-target_compile_options(sentinel_engine PRIVATE
+target_compile_options(sentinel_core PRIVATE
         -march=x86-64-v3 # AVX, AVX2, BMI1, BMI2, FMA and LZCNT enabled
         -Wall # All basic warnings
         -Wextra # More warnings
@@ -35,14 +37,18 @@ target_compile_options(sentinel_engine PRIVATE
         -Wunreachable-code # Unreachable code warnings
 )
 
-target_include_directories(sentinel_engine PRIVATE
+target_include_directories(sentinel_core PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/pb
 )
 
-target_link_libraries(sentinel_engine PRIVATE
+target_link_libraries(sentinel_core PUBLIC
         gRPC::grpc++
         gRPC::grpc++_reflection
         protobuf::libprotobuf
         onnxruntime::onnxruntime
 )
+
+# Total Executable
+add_executable(sentinel_engine src/main.cpp)
+target_link_libraries(sentinel_engine PRIVATE sentinel_core)
