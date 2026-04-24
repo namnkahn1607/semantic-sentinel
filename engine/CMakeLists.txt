@@ -28,8 +28,10 @@ add_library(sentinel_core STATIC
         include/service.hh
 )
 
-target_compile_options(sentinel_core PRIVATE
+target_compile_options(sentinel_core
+        PUBLIC
         -march=x86-64-v3 # AVX, AVX2, BMI1, BMI2, FMA and LZCNT enabled
+        PRIVATE
         -Wall # All basic warnings
         -Wextra # More warnings
         -Wpedantic # ISO C++ is a MUST
@@ -53,3 +55,14 @@ target_link_libraries(sentinel_core PUBLIC
 # Total Executable
 add_executable(sentinel_engine src/main.cc)
 target_link_libraries(sentinel_engine PRIVATE sentinel_core)
+
+# Testing Executables
+add_executable(avx2_test tests/avx_math_test.cc)
+target_link_libraries(avx2_test PRIVATE
+        sentinel_core
+        GTest::gtest_main
+        GTest::gtest
+)
+
+include(GoogleTest)
+gtest_discover_tests(avx2_test)
