@@ -8,6 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(Protobuf CONFIG REQUIRED)
 find_package(gRPC CONFIG REQUIRED)
 find_package(onnxruntime CONFIG REQUIRED)
+find_package(GTest CONFIG REQUIRED)
 
 add_library(sentinel_core STATIC
         # gRPC stubs files
