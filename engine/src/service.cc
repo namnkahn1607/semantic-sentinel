@@ -235,14 +235,14 @@ void SemanticServiceImpl::ReadPayload(const uint64_t v_offset,
 
     out_payload->resize(length);
     const uint64_t text_index =
-        (v_offset + sizeof(PayloadHeader)) & (engine::BUFFER_PAYLOAD_SIZE - 1);
+        (v_offset + sizeof(PayloadHeader)) & (engine::PAYLOAD_BUFFER_SIZE - 1);
     char* destination = out_payload->data();
 
-    if (engine::BUFFER_PAYLOAD_SIZE - text_index >= length) {
+    if (engine::PAYLOAD_BUFFER_SIZE - text_index >= length) {
         std::memcpy(destination, memory_arena.GetBufferPayload() + text_index,
                     length);
     } else {
-        const size_t chunk1_size = engine::BUFFER_PAYLOAD_SIZE - text_index;
+        const size_t chunk1_size = engine::PAYLOAD_BUFFER_SIZE - text_index;
         const size_t chunk2_size = length - chunk1_size;
         std::memcpy(destination, memory_arena.GetBufferPayload() + text_index,
                     chunk1_size);
@@ -256,7 +256,7 @@ uint64_t SemanticServiceImpl::WritePayload(const uint32_t node_id,
                                            const uint32_t length) const {
     const uint64_t header_offset = memory_arena.AllocatePayload(length);
     const uint64_t header_index =
-        header_offset & (engine::BUFFER_PAYLOAD_SIZE - 1);
+        header_offset & (engine::PAYLOAD_BUFFER_SIZE - 1);
 
     // Create and write payload header
     const PayloadHeader header{engine::VALID_IDENTIFIER, node_id, length};
@@ -265,13 +265,13 @@ uint64_t SemanticServiceImpl::WritePayload(const uint32_t node_id,
 
     // Now write the payload text
     const uint64_t text_index = (header_index + sizeof(PayloadHeader)) &
-                                (engine::BUFFER_PAYLOAD_SIZE - 1);
+                                (engine::PAYLOAD_BUFFER_SIZE - 1);
 
-    if (engine::BUFFER_PAYLOAD_SIZE - text_index >= length) {
+    if (engine::PAYLOAD_BUFFER_SIZE - text_index >= length) {
         std::memcpy(memory_arena.GetBufferPayload() + text_index, in_payload,
                     length);
     } else {
-        const size_t chunk1_size = engine::BUFFER_PAYLOAD_SIZE - text_index;
+        const size_t chunk1_size = engine::PAYLOAD_BUFFER_SIZE - text_index;
         const size_t chunk2_size = length - chunk1_size;
         std::memcpy(memory_arena.GetBufferPayload() + text_index, in_payload,
                     chunk1_size);
