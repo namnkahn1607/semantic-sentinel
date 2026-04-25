@@ -29,11 +29,11 @@ public:
 private:
     MemoryArena& memory_arena;
 
-    void ReadPayload(uint32_t offset, uint32_t length,
-                        std::string* out_payload) const;
+    void ReadPayload(uint64_t v_offset, uint32_t length,
+                     std::string* out_payload) const;
 
     uint64_t WritePayload(uint32_t node_id, const uint8_t* in_payload,
-                             uint32_t length) const;
+                          uint32_t length) const;
 };
 
 #endif  // SENTINEL_ENGINE_SERVICE_HH

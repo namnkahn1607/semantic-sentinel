@@ -42,7 +42,7 @@ grpc::Status SemanticServiceImpl::CheckCache(
             auto& [created_at, control_block] = memory_arena.GetNode(i);
             const uint64_t best_ctrl =
                 control_block.load(std::memory_order_relaxed);
-            auto [state, ref_bit, length, offset] = UnpackControl(best_ctrl);
+            auto [state, ref_bit, length, v_offset] = UnpackControl(best_ctrl);
 
             reusable_node_id =
                 (state == NodeState::DEAD && reusable_node_id == -1)
@@ -54,7 +54,7 @@ grpc::Status SemanticServiceImpl::CheckCache(
 
             if (state == NodeState::PENDING) {
                 const uint64_t birth_time =
-                    control_block.load(std::memory_order_acquire);
+                    created_at.load(std::memory_order_acquire);
 
                 if (birth_time == 0) {
                     continue;
@@ -63,7 +63,7 @@ grpc::Status SemanticServiceImpl::CheckCache(
                 if (curr_time - birth_time > engine::PENDING_LIFESPAN) {
                     uint64_t expected_ctrl = best_ctrl;
                     const uint64_t desired_ctrl =
-                        PackControl(NodeState::DEAD, ref_bit, length, offset);
+                        PackControl(NodeState::DEAD, ref_bit, length, v_offset);
 
                     if (control_block.compare_exchange_strong(
                             expected_ctrl, desired_ctrl,
@@ -184,7 +184,7 @@ grpc::Status SemanticServiceImpl::SetCache(
         const auto node_id = static_cast<uint32_t>(request->node_id());
         const std::string& payload = request->uncached_payload();
 
-        if (payload.length() > engine::BUFFER_PAYLOAD_SIZE) {
+        if (payload.length() > engine::MAX_PAYLOAD_LENGTH) {
             return {grpc::StatusCode::INVALID_ARGUMENT, "Oversized payload"};
         }
 
@@ -225,7 +225,7 @@ grpc::Status SemanticServiceImpl::SetCache(
     }
 }
 
-void SemanticServiceImpl::ReadPayload(const uint32_t offset,
+void SemanticServiceImpl::ReadPayload(const uint64_t v_offset,
                                       const uint32_t length,
                                       std::string* out_payload) const {
     if (length == 0) {
@@ -235,7 +235,7 @@ void SemanticServiceImpl::ReadPayload(const uint32_t offset,
 
     out_payload->resize(length);
     const uint64_t text_index =
-        (offset + sizeof(PayloadHeader)) & (engine::BUFFER_PAYLOAD_SIZE - 1);
+        (v_offset + sizeof(PayloadHeader)) & (engine::BUFFER_PAYLOAD_SIZE - 1);
     char* destination = out_payload->data();
 
     if (engine::BUFFER_PAYLOAD_SIZE - text_index >= length) {
@@ -246,7 +246,8 @@ void SemanticServiceImpl::ReadPayload(const uint32_t offset,
         const size_t chunk2_size = length - chunk1_size;
         std::memcpy(destination, memory_arena.GetBufferPayload() + text_index,
                     chunk1_size);
-        std::memcpy(destination, memory_arena.GetBufferPayload(), chunk2_size);
+        std::memcpy(destination + chunk1_size, memory_arena.GetBufferPayload(),
+                    chunk2_size);
     }
 }
 

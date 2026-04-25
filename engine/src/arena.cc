@@ -50,11 +50,11 @@ void MemoryArena::RunGarbageCollector(
         if (const uint64_t used_space = head - tail;
             used_space < engine::LOW_WATERMARK_THRESHOLD) {
             std::this_thread::sleep_for(
-                std::chrono::microseconds(engine::LOW_GC_RATE));
+                std::chrono::microseconds(engine::LOW_GC_SLEEP_RATE));
             continue;
         } else if (used_space < engine::HIGH_WATERMARK_THRESHOLD) {
             std::this_thread::sleep_for(
-                std::chrono::milliseconds(engine::HIGH_GC_RATE));
+                std::chrono::milliseconds(engine::HIGH_GC_SLEEP_RATE));
         }
 
         /* The Snowplow mechanism */
@@ -81,10 +81,10 @@ void MemoryArena::RunGarbageCollector(
         const uint32_t text_len = header->length;
         const uint32_t total_size = sizeof(PayloadHeader) + text_len;
         MetaNode& node = metadata[node_id];
-        auto [state, ref_bit, length, offset] = node.LoadControl();
+        auto [state, ref_bit, length, v_offset] = node.LoadControl();
 
         if (state == NodeState::DEAD ||
-            offset != static_cast<uint32_t>(tail & 0xFFFFFFFF)) {
+            v_offset != (tail & engine::VIRTUAL_OFFSET_MASK)) {
             read_tail.fetch_add(total_size, std::memory_order_relaxed);
             continue;
         }
@@ -92,11 +92,11 @@ void MemoryArena::RunGarbageCollector(
         if (ref_bit == EvictState::COLD) {
             // Evict in case encountering cold node
             uint64_t expected_ctrl =
-                PackControl(state, ref_bit, length, offset);
+                PackControl(state, ref_bit, length, v_offset);
             const uint64_t desired_ctrl =
-                PackControl(NodeState::DEAD, ref_bit, length, offset);
+                PackControl(NodeState::DEAD, ref_bit, length, v_offset);
 
-            node.control_block.compare_exchange_weak(
+            node.control_block.compare_exchange_strong(
                 expected_ctrl, desired_ctrl, std::memory_order_release,
                 std::memory_order_relaxed);
 
@@ -126,7 +126,7 @@ void MemoryArena::RunGarbageCollector(
             }
 
             uint64_t expected_ctrl =
-                PackControl(state, EvictState::HOT, length, offset);
+                PackControl(state, EvictState::HOT, length, v_offset);
             const uint64_t desired_ctrl =
                 PackControl(state, EvictState::COLD, length, rescued_offset);
 
