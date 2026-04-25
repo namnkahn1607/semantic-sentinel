@@ -55,24 +55,27 @@ grpc::Status SemanticServiceImpl::CheckCache(
             if (state == NodeState::PENDING) {
                 const uint64_t birth_time =
                     control_block.load(std::memory_order_acquire);
-                if (birth_time != 0) {
-                    if (curr_time - birth_time > engine::PENDING_LIFESPAN) {
-                        uint64_t expected_ctrl = best_ctrl;
-                        const uint64_t desired_ctrl = PackControl(
-                            NodeState::DEAD, ref_bit, length, offset);
 
-                        if (control_block.compare_exchange_strong(
-                                expected_ctrl, desired_ctrl,
-                                std::memory_order_release,
-                                std::memory_order_relaxed)) {
-                            reusable_node_id = (reusable_node_id == -1)
-                                                   ? static_cast<int32_t>(i)
-                                                   : reusable_node_id;
-                            created_at.store(0, std::memory_order_relaxed);
-                        }
-                    } else {
-                        is_valid = true;
+                if (birth_time == 0) {
+                    continue;
+                }
+
+                if (curr_time - birth_time > engine::PENDING_LIFESPAN) {
+                    uint64_t expected_ctrl = best_ctrl;
+                    const uint64_t desired_ctrl =
+                        PackControl(NodeState::DEAD, ref_bit, length, offset);
+
+                    if (control_block.compare_exchange_strong(
+                            expected_ctrl, desired_ctrl,
+                            std::memory_order_release,
+                            std::memory_order_relaxed)) {
+                        reusable_node_id = (reusable_node_id == -1)
+                                               ? static_cast<int32_t>(i)
+                                               : reusable_node_id;
+                        created_at.store(0, std::memory_order_relaxed);
                     }
+                } else {
+                    is_valid = true;
                 }
             }
 
