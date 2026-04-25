@@ -21,11 +21,11 @@ MemoryArena::MemoryArena() : write_head(0), read_tail(0) {
 
     // Allocating Ring Buffer payload array
     buffer_payload = static_cast<uint8_t*>(
-        std::aligned_alloc(32, engine::BUFFER_PAYLOAD_SIZE));
+        std::aligned_alloc(32, engine::PAYLOAD_BUFFER_SIZE));
 
     // Warming up by touching all pages to avoid Page Faults at runtime
     std::memset(vectors, 0, engine::TOTAL_MAX_SLOTS * engine::VECTOR_MEMSIZE);
-    std::memset(buffer_payload, 0, engine::BUFFER_PAYLOAD_SIZE);
+    std::memset(buffer_payload, 0, engine::PAYLOAD_BUFFER_SIZE);
 
     for (size_t i = 0; i < engine::TOTAL_MAX_SLOTS; ++i) {
         metadata[i].created_at.store(0, std::memory_order_relaxed);
@@ -58,10 +58,10 @@ void MemoryArena::RunGarbageCollector(
         }
 
         /* The Snowplow mechanism */
-        const uint64_t tail_index = tail & (engine::BUFFER_PAYLOAD_SIZE - 1);
+        const uint64_t tail_index = tail & (engine::PAYLOAD_BUFFER_SIZE - 1);
 
         // Perform leaping in case approaching buffer border
-        if (const uint64_t padding = engine::BUFFER_PAYLOAD_SIZE - tail_index;
+        if (const uint64_t padding = engine::PAYLOAD_BUFFER_SIZE - tail_index;
             padding < sizeof(PayloadHeader)) {
             read_tail.fetch_add(padding, std::memory_order_relaxed);
             continue;
@@ -106,23 +106,34 @@ void MemoryArena::RunGarbageCollector(
             // if the node is still hot.
             const uint64_t rescued_offset = AllocatePayload(text_len);
             const uint64_t rescued_index =
-                rescued_offset & (engine::BUFFER_PAYLOAD_SIZE - 1);
+                rescued_offset & (engine::PAYLOAD_BUFFER_SIZE - 1);
 
             PayloadHeader new_header{engine::VALID_IDENTIFIER, node_id,
                                      text_len};
             std::memcpy(buffer_payload + rescued_index, &new_header,
                         sizeof(PayloadHeader));
 
-            const uint64_t old_text_offset = tail + sizeof(PayloadHeader);
-            const uint64_t new_text_offset =
-                rescued_offset + sizeof(PayloadHeader);
+            uint64_t src_idx = (tail + sizeof(PayloadHeader)) &
+                               (engine::PAYLOAD_BUFFER_SIZE - 1);
+            uint64_t dst_idx = (rescued_offset + sizeof(PayloadHeader)) &
+                               (engine::PAYLOAD_BUFFER_SIZE - 1);
+            uint64_t bytes_left = text_len;
 
-            for (uint32_t i = 0; i < text_len; ++i) {
-                const uint64_t src_idx =
-                    (old_text_offset + i) & (engine::BUFFER_PAYLOAD_SIZE - 1);
-                const uint64_t dst_idx =
-                    (new_text_offset + i) & (engine::BUFFER_PAYLOAD_SIZE - 1);
-                buffer_payload[dst_idx] = buffer_payload[src_idx];
+            while (bytes_left > 0) {
+                uint64_t src_continuous = engine::PAYLOAD_BUFFER_SIZE - src_idx;
+                uint64_t dst_continuous = engine::PAYLOAD_BUFFER_SIZE - dst_idx;
+
+                const uint64_t chunk_size =
+                    std::min({bytes_left, src_continuous, dst_continuous});
+
+                std::memcpy(buffer_payload + dst_idx, buffer_payload + src_idx,
+                            chunk_size);
+
+                bytes_left -= chunk_size;
+                src_idx =
+                    (src_idx + chunk_size) & (engine::PAYLOAD_BUFFER_SIZE - 1);
+                dst_idx =
+                    (dst_idx + chunk_size) & (engine::PAYLOAD_BUFFER_SIZE - 1);
             }
 
             uint64_t expected_ctrl =
@@ -149,18 +160,18 @@ uint64_t MemoryArena::AllocatePayload(const uint32_t length) {
         // Backpressure mechanism: System memory resource exhausted
         if (curr_write + total_size -
                 read_tail.load(std::memory_order_relaxed) >=
-            engine::BUFFER_PAYLOAD_SIZE) {
+            engine::PAYLOAD_BUFFER_SIZE) {
             throw std::runtime_error("Resource Exhausted");
         }
 
         const uint64_t actual_index =
-            curr_write & (engine::BUFFER_PAYLOAD_SIZE - 1);
+            curr_write & (engine::PAYLOAD_BUFFER_SIZE - 1);
         uint64_t padding = 0;
 
         // Wrap-around Payload Header protection
-        if (engine::BUFFER_PAYLOAD_SIZE - actual_index <
+        if (engine::PAYLOAD_BUFFER_SIZE - actual_index <
             sizeof(PayloadHeader)) {
-            padding = engine::BUFFER_PAYLOAD_SIZE - actual_index;
+            padding = engine::PAYLOAD_BUFFER_SIZE - actual_index;
         }
 
         allocated_offset = curr_write + padding;

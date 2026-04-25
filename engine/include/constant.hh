@@ -22,7 +22,7 @@ inline constexpr size_t TOTAL_MAX_SLOTS = L0_MAX_SLOTS + L1_MAX_SLOTS;
 
 inline constexpr uint32_t MAX_PAYLOAD_LENGTH = 0xFFFFFF;
 inline constexpr uint64_t VIRTUAL_OFFSET_MASK = 0x1FFFFFFFFF;
-inline constexpr size_t BUFFER_PAYLOAD_SIZE = 4ULL * 1024 * 1024 * 1024;
+inline constexpr size_t PAYLOAD_BUFFER_SIZE = 4ULL * 1024 * 1024 * 1024;
 
 inline constexpr uint32_t PENDING_LIFESPAN = 30;
 
