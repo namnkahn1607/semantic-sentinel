@@ -8,7 +8,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(Protobuf CONFIG REQUIRED)
 find_package(gRPC CONFIG REQUIRED)
 find_package(onnxruntime CONFIG REQUIRED)
-find_package(GTest CONFIG REQUIRED)
 
 add_library(sentinel_core STATIC
         # gRPC stubs files
@@ -53,6 +52,7 @@ target_link_libraries(sentinel_core PUBLIC
 )
 
 # Total Executable
+find_package(GTest CONFIG REQUIRED)
 add_executable(sentinel_engine src/main.cc)
 target_link_libraries(sentinel_engine PRIVATE sentinel_core)
 
@@ -66,3 +66,11 @@ target_link_libraries(avx2_test PRIVATE
 
 include(GoogleTest)
 gtest_discover_tests(avx2_test)
+
+# Benchmark Executables
+find_package(benchmark CONFIG REQUIRED)
+add_executable(avx2_bench bench/avx_bench.cc)
+target_link_libraries(avx2_bench PRIVATE
+        sentinel_core
+        benchmark::benchmark
+)
