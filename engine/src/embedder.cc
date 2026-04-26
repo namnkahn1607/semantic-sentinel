@@ -84,13 +84,7 @@ AlignedVector Embedder::Encode(const std::string& prompt) const {
     }
 
     const auto* float_array{output_tensor.GetTensorData<float>()};
-    const size_t alloc_size = vec_dimension * sizeof(float);
-    auto query_vec =
-        AlignedVector{static_cast<float*>(std::aligned_alloc(32, alloc_size))};
-
-    if (!query_vec) {
-        throw std::bad_alloc();
-    }
+    auto query_vec = NewAlignedVector(vec_dimension);
 
     float* aligned_buffer = query_vec.get();
     std::memset(aligned_buffer, 0, engine::VECTOR_MEMSIZE);
