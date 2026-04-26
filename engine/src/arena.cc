@@ -185,3 +185,60 @@ uint64_t MemoryArena::AllocatePayload(const uint32_t length) {
 
     return allocated_offset;
 }
+
+void MemoryArena::ReadPayload(const uint64_t v_offset,
+                                      const uint32_t length,
+                                      std::string* out_payload) const {
+    if (length == 0) {
+        out_payload->clear();
+        return;
+    }
+
+    out_payload->resize(length);
+    const uint64_t text_index =
+        (v_offset + sizeof(PayloadHeader)) & (engine::PAYLOAD_BUFFER_SIZE - 1);
+    char* destination = out_payload->data();
+
+    if (engine::PAYLOAD_BUFFER_SIZE - text_index >= length) {
+        std::memcpy(destination, buffer_payload + text_index,
+                    length);
+    } else {
+        const size_t chunk1_size = engine::PAYLOAD_BUFFER_SIZE - text_index;
+        const size_t chunk2_size = length - chunk1_size;
+        std::memcpy(destination, buffer_payload + text_index,
+                    chunk1_size);
+        std::memcpy(destination + chunk1_size, buffer_payload,
+                    chunk2_size);
+    }
+}
+
+uint64_t MemoryArena::WritePayload(const uint32_t node_id,
+                                           const uint8_t* in_payload,
+                                           const uint32_t length) {
+    const uint64_t header_offset = AllocatePayload(length);
+    const uint64_t header_index =
+        header_offset & (engine::PAYLOAD_BUFFER_SIZE - 1);
+
+    // Create and write payload header
+    const PayloadHeader header{engine::VALID_IDENTIFIER, node_id, length};
+    std::memcpy(buffer_payload + header_index, &header,
+                sizeof(PayloadHeader));
+
+    // Now write the payload text
+    const uint64_t text_index = (header_index + sizeof(PayloadHeader)) &
+                                (engine::PAYLOAD_BUFFER_SIZE - 1);
+
+    if (engine::PAYLOAD_BUFFER_SIZE - text_index >= length) {
+        std::memcpy(buffer_payload + text_index, in_payload,
+                    length);
+    } else {
+        const size_t chunk1_size = engine::PAYLOAD_BUFFER_SIZE - text_index;
+        const size_t chunk2_size = length - chunk1_size;
+        std::memcpy(buffer_payload + text_index, in_payload,
+                    chunk1_size);
+        std::memcpy(buffer_payload, in_payload + chunk1_size,
+                    chunk2_size);
+    }
+ 
+    return header_offset;                                        
+}

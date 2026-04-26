@@ -38,8 +38,6 @@ public:
         return vectors + (engine::VECTOR_DIM * node_id);
     };
 
-    [[nodiscard]] uint8_t* GetBufferPayload() const { return buffer_payload; };
-
     [[nodiscard]] uint64_t GetWriteHead() const {
         return write_head.load(std::memory_order_acquire);
     };
@@ -48,8 +46,11 @@ public:
         return read_tail.load(std::memory_order_acquire);
     }
 
-    // Setters
-    uint64_t AllocatePayload(uint32_t length);
+    void ReadPayload(uint64_t v_offset, uint32_t length,
+                     std::string* out_payload) const;
+
+    uint64_t WritePayload(uint32_t node_id, const uint8_t* in_payload,
+                          uint32_t length);
 
 private:
     // Vector Arena
@@ -60,6 +61,8 @@ private:
     uint8_t* buffer_payload;
     std::atomic<uint64_t> write_head;
     std::atomic<uint64_t> read_tail;
+
+    uint64_t AllocatePayload(uint32_t length);
 };
 
 #endif  // SENTINEL_ENGINE_ARENA_HH

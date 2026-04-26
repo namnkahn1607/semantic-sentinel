@@ -101,7 +101,7 @@ grpc::Status SemanticServiceImpl::CheckCache(
             switch (state) {
                 case NodeState::READY:
                 case NodeState::MIGRATING: {
-                    ReadPayload(offset, length,
+                    memory_arena.ReadPayload(offset, length,
                                 response->mutable_cached_payload());
                     response->set_check_state(proto::CACHE_STATE_HIT);
                     response->set_node_id(-1);
@@ -191,7 +191,7 @@ grpc::Status SemanticServiceImpl::SetCache(
         const auto payload_len = static_cast<uint32_t>(payload.length());
         auto& [created_at, control_block] = memory_arena.GetNode(node_id);
 
-        const uint64_t new_offset = WritePayload(
+        const uint64_t new_offset = memory_arena.WritePayload(
             node_id, reinterpret_cast<const uint8_t*>(payload.data()),
             payload_len);
 
@@ -223,61 +223,4 @@ grpc::Status SemanticServiceImpl::SetCache(
     } catch (...) {
         return {grpc::StatusCode::INTERNAL, "Unknown Fatal error"};
     }
-}
-
-void SemanticServiceImpl::ReadPayload(const uint64_t v_offset,
-                                      const uint32_t length,
-                                      std::string* out_payload) const {
-    if (length == 0) {
-        out_payload->clear();
-        return;
-    }
-
-    out_payload->resize(length);
-    const uint64_t text_index =
-        (v_offset + sizeof(PayloadHeader)) & (engine::PAYLOAD_BUFFER_SIZE - 1);
-    char* destination = out_payload->data();
-
-    if (engine::PAYLOAD_BUFFER_SIZE - text_index >= length) {
-        std::memcpy(destination, memory_arena.GetBufferPayload() + text_index,
-                    length);
-    } else {
-        const size_t chunk1_size = engine::PAYLOAD_BUFFER_SIZE - text_index;
-        const size_t chunk2_size = length - chunk1_size;
-        std::memcpy(destination, memory_arena.GetBufferPayload() + text_index,
-                    chunk1_size);
-        std::memcpy(destination + chunk1_size, memory_arena.GetBufferPayload(),
-                    chunk2_size);
-    }
-}
-
-uint64_t SemanticServiceImpl::WritePayload(const uint32_t node_id,
-                                           const uint8_t* in_payload,
-                                           const uint32_t length) const {
-    const uint64_t header_offset = memory_arena.AllocatePayload(length);
-    const uint64_t header_index =
-        header_offset & (engine::PAYLOAD_BUFFER_SIZE - 1);
-
-    // Create and write payload header
-    const PayloadHeader header{engine::VALID_IDENTIFIER, node_id, length};
-    std::memcpy(memory_arena.GetBufferPayload() + header_index, &header,
-                sizeof(PayloadHeader));
-
-    // Now write the payload text
-    const uint64_t text_index = (header_index + sizeof(PayloadHeader)) &
-                                (engine::PAYLOAD_BUFFER_SIZE - 1);
-
-    if (engine::PAYLOAD_BUFFER_SIZE - text_index >= length) {
-        std::memcpy(memory_arena.GetBufferPayload() + text_index, in_payload,
-                    length);
-    } else {
-        const size_t chunk1_size = engine::PAYLOAD_BUFFER_SIZE - text_index;
-        const size_t chunk2_size = length - chunk1_size;
-        std::memcpy(memory_arena.GetBufferPayload() + text_index, in_payload,
-                    chunk1_size);
-        std::memcpy(memory_arena.GetBufferPayload(), in_payload + chunk1_size,
-                    chunk2_size);
-    }
-
-    return header_offset;
 }
