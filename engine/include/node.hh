@@ -7,6 +7,8 @@
 
 #include <atomic>
 
+#include "constant.hh"
+
 enum class NodeState : uint8_t {
     DEAD = 0,
     PENDING = 1,
@@ -14,7 +16,7 @@ enum class NodeState : uint8_t {
     MIGRATING = 3
 };
 
-enum class EvictState : bool { COLD = false, HOT = true };
+enum class EvictState : uint8_t { COLD = 0, HOT = 1 };
 
 struct UnpackedControl {
     NodeState state;
