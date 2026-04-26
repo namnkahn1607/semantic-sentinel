@@ -6,7 +6,9 @@
 
 #include "constant.hh"
 
-Embedder::Embedder() {
+Embedder::Embedder()
+    : env_{Ort::Env(ORT_LOGGING_LEVEL_WARNING, "onnx-env")}
+    , session_options_{Ort::SessionOptions()} {
     const char* model_path{std::getenv("INFERENCE_MODEL_PATH")};
     if (model_path == nullptr) {
         throw std::runtime_error(
@@ -18,10 +20,6 @@ Embedder::Embedder() {
         throw std::runtime_error(
             "Environment variable ORT_EXTENSIONS_PATH is not set");
     }
-
-    env_ = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "onnx-env");
-
-    session_options_ = Ort::SessionOptions();
 
     // Highest level of graph optimization
     session_options_.SetGraphOptimizationLevel(ORT_ENABLE_ALL);
@@ -69,6 +67,10 @@ AlignedVector Embedder::Encode(const std::string& prompt) const {
     const auto type_info{output_tensor.GetTensorTypeAndShapeInfo()};
     // Output shape is always [1, N, 384].
     const std::vector output_shape{type_info.GetShape()};
+
+    if (output_shape[0] != 1) {
+        throw std::runtime_error("Batching Inference is not supported");
+    }
 
     const size_t seq_length{
         static_cast<size_t>(output_shape[1])};  // number of tokens in sequence
