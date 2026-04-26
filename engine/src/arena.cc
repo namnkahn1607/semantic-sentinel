@@ -4,10 +4,9 @@
 
 #include "arena.hh"
 
-#include <bits/this_thread_sleep.h>
-
 #include <cstring>
 #include <iostream>
+#include <thread>
 
 #include "constant.hh"
 
@@ -50,11 +49,11 @@ void MemoryArena::RunGarbageCollector(
         if (const uint64_t used_space = head - tail;
             used_space < engine::LOW_WATERMARK_THRESHOLD) {
             std::this_thread::sleep_for(
-                std::chrono::microseconds(engine::LOW_GC_SLEEP_RATE));
+                std::chrono::milliseconds(engine::LOW_GC_SLEEP_MS));
             continue;
         } else if (used_space < engine::HIGH_WATERMARK_THRESHOLD) {
             std::this_thread::sleep_for(
-                std::chrono::milliseconds(engine::HIGH_GC_SLEEP_RATE));
+                std::chrono::milliseconds(engine::HIGH_GC_SLEEP_MS));
         }
 
         /* The Snowplow mechanism */
@@ -186,9 +185,8 @@ uint64_t MemoryArena::AllocatePayload(const uint32_t length) {
     return allocated_offset;
 }
 
-void MemoryArena::ReadPayload(const uint64_t v_offset,
-                                      const uint32_t length,
-                                      std::string* out_payload) const {
+void MemoryArena::ReadPayload(const uint64_t v_offset, const uint32_t length,
+                              std::string* out_payload) const {
     if (length == 0) {
         out_payload->clear();
         return;
@@ -200,45 +198,38 @@ void MemoryArena::ReadPayload(const uint64_t v_offset,
     char* destination = out_payload->data();
 
     if (engine::PAYLOAD_BUFFER_SIZE - text_index >= length) {
-        std::memcpy(destination, buffer_payload + text_index,
-                    length);
+        std::memcpy(destination, buffer_payload + text_index, length);
     } else {
         const size_t chunk1_size = engine::PAYLOAD_BUFFER_SIZE - text_index;
         const size_t chunk2_size = length - chunk1_size;
-        std::memcpy(destination, buffer_payload + text_index,
-                    chunk1_size);
-        std::memcpy(destination + chunk1_size, buffer_payload,
-                    chunk2_size);
+        std::memcpy(destination, buffer_payload + text_index, chunk1_size);
+        std::memcpy(destination + chunk1_size, buffer_payload, chunk2_size);
     }
 }
 
 uint64_t MemoryArena::WritePayload(const uint32_t node_id,
-                                           const uint8_t* in_payload,
-                                           const uint32_t length) {
+                                   const uint8_t* in_payload,
+                                   const uint32_t length) {
     const uint64_t header_offset = AllocatePayload(length);
     const uint64_t header_index =
         header_offset & (engine::PAYLOAD_BUFFER_SIZE - 1);
 
     // Create and write payload header
     const PayloadHeader header{engine::VALID_IDENTIFIER, node_id, length};
-    std::memcpy(buffer_payload + header_index, &header,
-                sizeof(PayloadHeader));
+    std::memcpy(buffer_payload + header_index, &header, sizeof(PayloadHeader));
 
     // Now write the payload text
     const uint64_t text_index = (header_index + sizeof(PayloadHeader)) &
                                 (engine::PAYLOAD_BUFFER_SIZE - 1);
 
     if (engine::PAYLOAD_BUFFER_SIZE - text_index >= length) {
-        std::memcpy(buffer_payload + text_index, in_payload,
-                    length);
+        std::memcpy(buffer_payload + text_index, in_payload, length);
     } else {
         const size_t chunk1_size = engine::PAYLOAD_BUFFER_SIZE - text_index;
         const size_t chunk2_size = length - chunk1_size;
-        std::memcpy(buffer_payload + text_index, in_payload,
-                    chunk1_size);
-        std::memcpy(buffer_payload, in_payload + chunk1_size,
-                    chunk2_size);
+        std::memcpy(buffer_payload + text_index, in_payload, chunk1_size);
+        std::memcpy(buffer_payload, in_payload + chunk1_size, chunk2_size);
     }
- 
-    return header_offset;                                        
+
+    return header_offset;
 }
