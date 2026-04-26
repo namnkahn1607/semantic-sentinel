@@ -4,6 +4,7 @@
   "dependencies": [
     "grpc",
     "onnxruntime",
-    "gtest"
+    "gtest",
+    "benchmark"
   ]
 }
