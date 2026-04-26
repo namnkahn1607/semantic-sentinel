@@ -40,8 +40,8 @@ grpc::Status SemanticServiceImpl::CheckCache(
 
         for (size_t i = 0; i < engine::L0_MAX_SLOTS; ++i) {
             auto& [created_at, control_block] = memory_arena.GetNode(i);
-            const uint64_t best_ctrl =
-                control_block.load(std::memory_order_relaxed);
+            const uint64_t best_ctrl = control_block.load(
+                std::memory_order_relaxed);  // fine for x86, otherwise acquire
             auto [state, ref_bit, length, v_offset] = UnpackControl(best_ctrl);
 
             reusable_node_id =
@@ -89,6 +89,8 @@ grpc::Status SemanticServiceImpl::CheckCache(
             }
         }
 
+        // TODO: Perform L1 Scan
+
         if (max_score >= engine::SIMILARITY_THRESHOLD) {
             auto& [created_at, control_block] =
                 memory_arena.GetNode(static_cast<size_t>(best_node_id));
@@ -101,8 +103,8 @@ grpc::Status SemanticServiceImpl::CheckCache(
             switch (state) {
                 case NodeState::READY:
                 case NodeState::MIGRATING: {
-                    memory_arena.ReadPayload(offset, length,
-                                response->mutable_cached_payload());
+                    memory_arena.ReadPayload(
+                        offset, length, response->mutable_cached_payload());
                     response->set_check_state(proto::CACHE_STATE_HIT);
                     response->set_node_id(-1);
 
@@ -123,6 +125,7 @@ grpc::Status SemanticServiceImpl::CheckCache(
                     return grpc::Status::OK;
 
                 case NodeState::DEAD:
+                    reusable_node_id = best_node_id;
                     break;
             }
         }
@@ -141,7 +144,7 @@ grpc::Status SemanticServiceImpl::CheckCache(
                 PackControl(NodeState::PENDING, EvictState::HOT, 0, 0);
 
             if (control_block.compare_exchange_strong(
-                    expected_ctrl, desired_ctrl, std::memory_order_acquire,
+                    expected_ctrl, desired_ctrl, std::memory_order_release,
                     std::memory_order_relaxed)) {
                 std::memcpy(memory_arena.GetVector(
                                 static_cast<size_t>(reusable_node_id)),
