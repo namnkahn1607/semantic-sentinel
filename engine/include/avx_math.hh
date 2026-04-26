@@ -9,6 +9,8 @@
 #if defined(__x86_64__) || defined(_M_X64)
 #include <immintrin.h>
 
+#include "constant.hh"
+
 inline float CosineSimilarity(const float* query, const float* node_vector) {
     // Apply 4 256-bit registers holding eight 0.0f's (unroll_factor = 4).
     __m256 sum0 = _mm256_setzero_ps();
@@ -16,7 +18,7 @@ inline float CosineSimilarity(const float* query, const float* node_vector) {
     __m256 sum2 = _mm256_setzero_ps();
     __m256 sum3 = _mm256_setzero_ps();
 
-    for (int i = 0; i < 384; i += 32) {
+    for (size_t i = 0; i < engine::VECTOR_DIM; i += 32) {
         // Load 8 floats of 'query'
         const __m256 q0 = _mm256_load_ps(query + i);
         const __m256 q1 = _mm256_load_ps(query + i + 8);
@@ -63,7 +65,7 @@ inline float CosineSimilarity(const float* query, const float* node_vector) {
 inline float CosineSimilarity(const float* query, const float* node_vector) {
     float dot_product{0.0f};
 
-    for (int i = 0; i < engine::VECTOR_DIM; ++i) {
+    for (size_t i = 0; i < engine::VECTOR_DIM; ++i) {
         dot_product += query[i] * node_vector[i];
     }
 
