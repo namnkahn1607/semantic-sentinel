@@ -26,6 +26,7 @@ Embedder::Embedder() {
     // Highest level of graph optimization
     session_options_.SetGraphOptimizationLevel(ORT_ENABLE_ALL);
     session_options_.SetIntraOpNumThreads(1);
+    session_options_.SetInterOpNumThreads(1);
 
     try {
         session_options_.RegisterCustomOpsLibrary(ext_path);
@@ -105,6 +106,10 @@ AlignedVector Embedder::Encode(const std::string& prompt) const {
     float sum_sq = 0.0f;
     for (size_t i = 0; i < vec_dimension; ++i) {
         sum_sq += aligned_buffer[i] * aligned_buffer[i];
+    }
+
+    if (sum_sq < 1e-9f) {
+        throw std::runtime_error("Degenerate zero vector from model");
     }
 
     const float inv_magnitude{
