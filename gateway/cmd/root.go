@@ -9,4 +9,6 @@ var rootCmd = &cobra.Command{
 	Use 'strix init' to set up your environment, then 'strix serve' to start.`,
 }
 
-func init() {}
+func init() {
+	rootCmd.AddCommand(initCmd)
+}
