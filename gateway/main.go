@@ -37,8 +37,8 @@ const (
 )
 
 func main() {
-	// Affinity setting: use only 1 vCPU
-	runtime.GOMAXPROCS(1)
+	// Affinity setting: use only 2 vCPU
+	runtime.GOMAXPROCS(2)
 
 	if err := run(); err != nil {
 		log.Fatalf("[HTTP Gateway] Gateway terminated: %v", err)

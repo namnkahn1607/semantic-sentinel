@@ -8,7 +8,7 @@ WORKDIR /app
 # Move binaries & scripts into Container
 COPY engine/build-release/sentinel_engine .
 COPY gateway/build-release/gateway .
-COPY start.sh .
+COPY scripts/start.sh .
 
 # Open port for HTTP Gateway
 EXPOSE 8080
