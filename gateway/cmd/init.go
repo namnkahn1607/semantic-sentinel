@@ -40,9 +40,9 @@ func runInit(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("cannot create %s: %w", dir, mkErr)
 	}
 
-	// 2. Create the environment file at ~/.strix/.env.
+	// 2. Create the environment file ~/.strix/.env.
 	if _, statErr := os.Stat(env); errors.Is(statErr, os.ErrNotExist) {
-		file, createErr := os.OpenFile(env, os.O_CREATE|os.O_WRONLY, envPermission)
+		file, createErr := os.OpenFile(env, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, envPermission)
 		if createErr != nil {
 			return fmt.Errorf("cannot create %s: %w", env, createErr)
 		}
@@ -60,9 +60,42 @@ func runInit(_ *cobra.Command, _ []string) error {
 
 	// 3. Enforce 0600 regardless manual chmod
 	if chmodErr := os.Chmod(env, envPermission); chmodErr != nil {
-		return fmt.Errorf("[strix init] Cannot set 0600 on %s due to: %w", env, chmodErr)
+		return fmt.Errorf("SECURITY: Cannot set 0600 on %s due to: %w", env, chmodErr)
 	}
 
 	fmt.Println("[strix init] Environment ready. Run 'strix config set' to add your credentials.")
+	return nil
+}
+
+// EnvFilePath returns the canonical path to ~/.strix/.env.
+// Used by other commands to locate the configuration file.
+func EnvFilePath() (string, error) {
+	home, dirErr := os.UserHomeDir()
+	if dirErr != nil {
+		return "", fmt.Errorf("cannot determine home directory: %w", dirErr)
+	}
+
+	return filepath.Join(home, envDir, envFileName), nil
+}
+
+// AssertEnvPermissions returns an error if ~/.strix/.env has permissions
+// wider than 0600. Called by 'strix serve' as a boot-time security check.
+func AssertEnvPermissions() error {
+	envPath, dirErr := EnvFilePath()
+	if dirErr != nil {
+		return dirErr
+	}
+
+	info, statErr := os.Stat(envPath)
+	if statErr != nil {
+		return fmt.Errorf("cannot stat %s (run 'strix init' first): %w", envPath, statErr)
+	}
+
+	if perm := info.Mode().Perm(); perm != envPermission {
+		return fmt.Errorf(
+			"SECURITY: %s has permissions %o (expected 0600). Run 'chmod 0600 %s' or 'strix init' to fix", envPath, perm, envPath,
+		)
+	}
+
 	return nil
 }
