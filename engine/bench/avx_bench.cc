@@ -74,4 +74,47 @@ static void Bench1KBatch(benchmark::State& state) {
 
 BENCHMARK(Bench1KBatch)->Unit(benchmark::kNanosecond)->Iterations(10000);
 
+static void Bench20KBatch(benchmark::State& state) {
+    constexpr uint32_t NUM_VECTORS = 20000;
+    constexpr uint32_t TOTAL_FLOATS = DIM * NUM_VECTORS;
+
+    auto* l0_cache =
+        static_cast<float*>(_mm_malloc(TOTAL_FLOATS * sizeof(float), ALIGN));
+    auto* query = static_cast<float*>(_mm_malloc(DIM * sizeof(float), ALIGN));
+
+    std::mt19937 gen(42);  // NOLINT(cert-msc51-cpp)
+    std::uniform_real_distribution dist(-1.0f, 1.0f);
+
+    for (int32_t i = 0; i < TOTAL_FLOATS; ++i) {
+        l0_cache[i] = dist(gen);
+    }
+
+    for (int32_t i = 0; i < DIM; ++i) {
+        query[i] = dist(gen);
+    }
+
+    for ([[maybe_unused]] auto _ : state) {
+        for (int32_t i = 0; i < NUM_VECTORS; ++i) {
+            float* node_vec = l0_cache + (i * DIM);
+
+            benchmark::DoNotOptimize(query);
+            benchmark::DoNotOptimize(node_vec);
+
+            float res = CosineSimilarity(query, node_vec);
+
+            benchmark::DoNotOptimize(res);
+        }
+    }
+
+    state.SetItemsProcessed(state.iterations() * NUM_VECTORS);
+    state.SetBytesProcessed(
+        // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
+        state.iterations() * TOTAL_FLOATS * sizeof(float));
+
+    _mm_free(l0_cache);
+    _mm_free(query);
+}
+
+BENCHMARK(Bench20KBatch)->Unit(benchmark::kMillisecond)->Iterations(10);
+
 BENCHMARK_MAIN();
