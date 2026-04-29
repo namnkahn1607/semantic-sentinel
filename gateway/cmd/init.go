@@ -64,7 +64,9 @@ func runInit(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("SECURITY: Cannot set 0600 on %s due to: %w", env, chmodErr)
 	}
 
-	fmt.Println("[strix init] Environment ready. Run 'strix config set' to add your credentials.")
+	fmt.Println(
+		"[strix init] Environment ready. Run 'strix config set' to add your credentials.",
+	)
 	return nil
 }
 
@@ -94,7 +96,8 @@ func AssertEnvPermissions() error {
 
 	if perm := info.Mode().Perm(); perm != envPermission {
 		return fmt.Errorf(
-			"SECURITY: %s has permissions %o (expected 0600). Run 'chmod 0600 %s' or 'strix init' to fix", envPath, perm, envPath,
+			"SECURITY: %s has permissions %o (expected 0600). Run 'chmod 0600 %s' or 'strix init' to fix",
+			envPath, perm, envPath,
 		)
 	}
 

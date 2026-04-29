@@ -49,7 +49,9 @@ func checkRAM() error {
 		}
 
 		if totalBytes := kb * 1024; totalBytes < minRAMBytes {
-			return fmt.Errorf("insufficient RAM. Require at least %dMB", minRAMBytes/(1024*1024))
+			return fmt.Errorf(
+				"insufficient RAM. Require at least %dMB", minRAMBytes/(1024*1024),
+			)
 		}
 
 		return nil
