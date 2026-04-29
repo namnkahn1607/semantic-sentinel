@@ -20,6 +20,7 @@ var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize the Strix environment (~/.strix/)",
 	Long: `Creates the ~/.strix/ directory and an empty ~/.strix/.env config file.
+
 	The .env file is created with permission 0600 (owner read/write only)
 	to prevent API key leakage. Strix will refuse to run if this permission
 	is ever widened.`,
