@@ -23,6 +23,7 @@ const (
 	socketAddress = "unix:///tmp/sentinel.sock"
 	endpoint      = "/v1/cache/check"
 	serverPort    = ":8080"
+	maxFD         = 65536
 
 	funcWupTimeout        = 50 * time.Millisecond
 	coldSrtTimeout        = 100 * time.Millisecond
@@ -46,6 +47,10 @@ func main() {
 }
 
 func run() error {
+	if increaseFDErr := openMoreFD(); increaseFDErr != nil {
+		return increaseFDErr
+	}
+
 	// 1. Initialize L1 Exact-Match Fast Cache
 	log.Printf("[HTTP Gateway] Allocating %dMB Off-heap Memory for Exact-Match Cache...", maxL1CacheSize/(1024*1024))
 	l1Cache := fastcache.New(maxL1CacheSize)
@@ -101,6 +106,10 @@ func run() error {
 	server := &http.Server{
 		Addr:    serverPort,
 		Handler: mux,
+		// prevent Slowloris attack
+		ReadHeaderTimeout: 3 * time.Second,
+		ReadTimeout:       5 * time.Second,
+		WriteTimeout:      10 * time.Second,
 	}
 
 	// 7. OS signal channel
@@ -134,5 +143,25 @@ func run() error {
 	}
 
 	log.Printf("[HTTP Gateway] Server stopped.")
+	return nil
+}
+
+func openMoreFD() error {
+	var rLimit syscall.Rlimit
+	if ulimitErr := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit); ulimitErr != nil {
+		return fmt.Errorf("[HTTP Gateway] Cannot read ulimit: %v", ulimitErr)
+	}
+
+	if rLimit.Cur < maxFD {
+		rLimit.Cur = maxFD
+		rLimit.Max = max(rLimit.Max, maxFD)
+
+		if setErr := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit); setErr != nil {
+			log.Printf("[HTTP Gateway] OS refused to increase ulimit. Strix can crash under high load.")
+		} else {
+			log.Printf("[HTTP Gateway] Successfully increase FD amount to %d", maxFD)
+		}
+	}
+
 	return nil
 }
