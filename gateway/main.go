@@ -1,3 +1,7 @@
 package main
 
-func main() {}
+import "gateway/cmd"
+
+func main() {
+	cmd.Execute()
+}
