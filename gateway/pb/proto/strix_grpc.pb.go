@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.6.1
 // - protoc             (unknown)
-// source: proto/sentinel.proto
+// source: proto/strix.proto
 
 package pb
 
@@ -155,5 +155,5 @@ var SemanticService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "proto/sentinel.proto",
+	Metadata: "proto/strix.proto",
 }

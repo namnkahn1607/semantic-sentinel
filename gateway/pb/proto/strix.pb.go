@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        (unknown)
-// source: proto/sentinel.proto
+// source: proto/strix.proto
 
 package pb
 
@@ -57,11 +57,11 @@ func (x CacheState) String() string {
 }
 
 func (CacheState) Descriptor() protoreflect.EnumDescriptor {
-	return file_proto_sentinel_proto_enumTypes[0].Descriptor()
+	return file_proto_strix_proto_enumTypes[0].Descriptor()
 }
 
 func (CacheState) Type() protoreflect.EnumType {
-	return &file_proto_sentinel_proto_enumTypes[0]
+	return &file_proto_strix_proto_enumTypes[0]
 }
 
 func (x CacheState) Number() protoreflect.EnumNumber {
@@ -70,7 +70,7 @@ func (x CacheState) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use CacheState.Descriptor instead.
 func (CacheState) EnumDescriptor() ([]byte, []int) {
-	return file_proto_sentinel_proto_rawDescGZIP(), []int{0}
+	return file_proto_strix_proto_rawDescGZIP(), []int{0}
 }
 
 type CheckCacheRequest struct {
@@ -82,7 +82,7 @@ type CheckCacheRequest struct {
 
 func (x *CheckCacheRequest) Reset() {
 	*x = CheckCacheRequest{}
-	mi := &file_proto_sentinel_proto_msgTypes[0]
+	mi := &file_proto_strix_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -94,7 +94,7 @@ func (x *CheckCacheRequest) String() string {
 func (*CheckCacheRequest) ProtoMessage() {}
 
 func (x *CheckCacheRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_sentinel_proto_msgTypes[0]
+	mi := &file_proto_strix_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -107,7 +107,7 @@ func (x *CheckCacheRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckCacheRequest.ProtoReflect.Descriptor instead.
 func (*CheckCacheRequest) Descriptor() ([]byte, []int) {
-	return file_proto_sentinel_proto_rawDescGZIP(), []int{0}
+	return file_proto_strix_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *CheckCacheRequest) GetPrompt() string {
@@ -128,7 +128,7 @@ type CheckCacheResponse struct {
 
 func (x *CheckCacheResponse) Reset() {
 	*x = CheckCacheResponse{}
-	mi := &file_proto_sentinel_proto_msgTypes[1]
+	mi := &file_proto_strix_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -140,7 +140,7 @@ func (x *CheckCacheResponse) String() string {
 func (*CheckCacheResponse) ProtoMessage() {}
 
 func (x *CheckCacheResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_sentinel_proto_msgTypes[1]
+	mi := &file_proto_strix_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -153,7 +153,7 @@ func (x *CheckCacheResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckCacheResponse.ProtoReflect.Descriptor instead.
 func (*CheckCacheResponse) Descriptor() ([]byte, []int) {
-	return file_proto_sentinel_proto_rawDescGZIP(), []int{1}
+	return file_proto_strix_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *CheckCacheResponse) GetCheckState() CacheState {
@@ -187,7 +187,7 @@ type SetCacheRequest struct {
 
 func (x *SetCacheRequest) Reset() {
 	*x = SetCacheRequest{}
-	mi := &file_proto_sentinel_proto_msgTypes[2]
+	mi := &file_proto_strix_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -199,7 +199,7 @@ func (x *SetCacheRequest) String() string {
 func (*SetCacheRequest) ProtoMessage() {}
 
 func (x *SetCacheRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_sentinel_proto_msgTypes[2]
+	mi := &file_proto_strix_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -212,7 +212,7 @@ func (x *SetCacheRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetCacheRequest.ProtoReflect.Descriptor instead.
 func (*SetCacheRequest) Descriptor() ([]byte, []int) {
-	return file_proto_sentinel_proto_rawDescGZIP(), []int{2}
+	return file_proto_strix_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *SetCacheRequest) GetNodeId() int32 {
@@ -238,7 +238,7 @@ type SetCacheResponse struct {
 
 func (x *SetCacheResponse) Reset() {
 	*x = SetCacheResponse{}
-	mi := &file_proto_sentinel_proto_msgTypes[3]
+	mi := &file_proto_strix_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -250,7 +250,7 @@ func (x *SetCacheResponse) String() string {
 func (*SetCacheResponse) ProtoMessage() {}
 
 func (x *SetCacheResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_sentinel_proto_msgTypes[3]
+	mi := &file_proto_strix_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -263,7 +263,7 @@ func (x *SetCacheResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetCacheResponse.ProtoReflect.Descriptor instead.
 func (*SetCacheResponse) Descriptor() ([]byte, []int) {
-	return file_proto_sentinel_proto_rawDescGZIP(), []int{3}
+	return file_proto_strix_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *SetCacheResponse) GetSuccess() bool {
@@ -273,11 +273,11 @@ func (x *SetCacheResponse) GetSuccess() bool {
 	return false
 }
 
-var File_proto_sentinel_proto protoreflect.FileDescriptor
+var File_proto_strix_proto protoreflect.FileDescriptor
 
-const file_proto_sentinel_proto_rawDesc = "" +
+const file_proto_strix_proto_rawDesc = "" +
 	"\n" +
-	"\x14proto/sentinel.proto\x12\x05proto\"+\n" +
+	"\x11proto/strix.proto\x12\x05proto\"+\n" +
 	"\x11CheckCacheRequest\x12\x16\n" +
 	"\x06prompt\x18\x01 \x01(\tR\x06prompt\"\x88\x01\n" +
 	"\x12CheckCacheResponse\x122\n" +
@@ -299,30 +299,30 @@ const file_proto_sentinel_proto_rawDesc = "" +
 	"\x0fSemanticService\x12A\n" +
 	"\n" +
 	"CheckCache\x12\x18.proto.CheckCacheRequest\x1a\x19.proto.CheckCacheResponse\x12;\n" +
-	"\bSetCache\x12\x16.proto.SetCacheRequest\x1a\x17.proto.SetCacheResponseB\x15Z\x13sentinel/gateway/pbb\x06proto3"
+	"\bSetCache\x12\x16.proto.SetCacheRequest\x1a\x17.proto.SetCacheResponseB\x12Z\x10strix/gateway/pbb\x06proto3"
 
 var (
-	file_proto_sentinel_proto_rawDescOnce sync.Once
-	file_proto_sentinel_proto_rawDescData []byte
+	file_proto_strix_proto_rawDescOnce sync.Once
+	file_proto_strix_proto_rawDescData []byte
 )
 
-func file_proto_sentinel_proto_rawDescGZIP() []byte {
-	file_proto_sentinel_proto_rawDescOnce.Do(func() {
-		file_proto_sentinel_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_sentinel_proto_rawDesc), len(file_proto_sentinel_proto_rawDesc)))
+func file_proto_strix_proto_rawDescGZIP() []byte {
+	file_proto_strix_proto_rawDescOnce.Do(func() {
+		file_proto_strix_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_strix_proto_rawDesc), len(file_proto_strix_proto_rawDesc)))
 	})
-	return file_proto_sentinel_proto_rawDescData
+	return file_proto_strix_proto_rawDescData
 }
 
-var file_proto_sentinel_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_proto_sentinel_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
-var file_proto_sentinel_proto_goTypes = []any{
+var file_proto_strix_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_proto_strix_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_proto_strix_proto_goTypes = []any{
 	(CacheState)(0),            // 0: proto.CacheState
 	(*CheckCacheRequest)(nil),  // 1: proto.CheckCacheRequest
 	(*CheckCacheResponse)(nil), // 2: proto.CheckCacheResponse
 	(*SetCacheRequest)(nil),    // 3: proto.SetCacheRequest
 	(*SetCacheResponse)(nil),   // 4: proto.SetCacheResponse
 }
-var file_proto_sentinel_proto_depIdxs = []int32{
+var file_proto_strix_proto_depIdxs = []int32{
 	0, // 0: proto.CheckCacheResponse.check_state:type_name -> proto.CacheState
 	1, // 1: proto.SemanticService.CheckCache:input_type -> proto.CheckCacheRequest
 	3, // 2: proto.SemanticService.SetCache:input_type -> proto.SetCacheRequest
@@ -335,27 +335,27 @@ var file_proto_sentinel_proto_depIdxs = []int32{
 	0, // [0:1] is the sub-list for field type_name
 }
 
-func init() { file_proto_sentinel_proto_init() }
-func file_proto_sentinel_proto_init() {
-	if File_proto_sentinel_proto != nil {
+func init() { file_proto_strix_proto_init() }
+func file_proto_strix_proto_init() {
+	if File_proto_strix_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_sentinel_proto_rawDesc), len(file_proto_sentinel_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_strix_proto_rawDesc), len(file_proto_strix_proto_rawDesc)),
 			NumEnums:      1,
 			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_proto_sentinel_proto_goTypes,
-		DependencyIndexes: file_proto_sentinel_proto_depIdxs,
-		EnumInfos:         file_proto_sentinel_proto_enumTypes,
-		MessageInfos:      file_proto_sentinel_proto_msgTypes,
+		GoTypes:           file_proto_strix_proto_goTypes,
+		DependencyIndexes: file_proto_strix_proto_depIdxs,
+		EnumInfos:         file_proto_strix_proto_enumTypes,
+		MessageInfos:      file_proto_strix_proto_msgTypes,
 	}.Build()
-	File_proto_sentinel_proto = out.File
-	file_proto_sentinel_proto_goTypes = nil
-	file_proto_sentinel_proto_depIdxs = nil
+	File_proto_strix_proto = out.File
+	file_proto_strix_proto_goTypes = nil
+	file_proto_strix_proto_depIdxs = nil
 }
