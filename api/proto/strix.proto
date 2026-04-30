@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package proto;
 
-option go_package = "sentinel/gateway/pb";
+option go_package = "strix/gateway/pb";
 
 enum CacheState {
   CACHE_STATE_UNSPECIFIED = 0;
