@@ -42,21 +42,20 @@ func runInit(_ *cobra.Command, _ []string) error {
 	}
 
 	// 2. Create the environment file ~/.strix/.env.
-	if _, statErr := os.Stat(env); errors.Is(statErr, os.ErrNotExist) {
-		file, createErr := os.OpenFile(env, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, envPermission)
-		if createErr != nil {
-			return fmt.Errorf("cannot create %s: %w", env, createErr)
+	file, createErr := os.OpenFile(env, os.O_CREATE|os.O_EXCL|os.O_WRONLY, envPermission)
+	switch {
+	case createErr == nil && file != nil:
+		fmt.Printf("[strix init] Created %s\n", env)
+
+		if closeErr := file.Close(); closeErr != nil {
+			fmt.Printf("[strix init] Error closing env-file: %v.\n", closeErr)
 		}
 
-		defer func() {
-			if closeErr := file.Close(); closeErr != nil {
-				fmt.Printf("[strix init] Error close env-file: %v\n.", closeErr)
-			}
-		}()
+	case errors.Is(createErr, os.ErrExist):
+		fmt.Printf("[strix init] %s already exists.\n", env)
 
-		fmt.Printf("[strix init] Create %s\n.", env)
-	} else {
-		fmt.Println("[strix init] Env-file already exists.")
+	default:
+		return fmt.Errorf("cannot create %s: %w", env, createErr)
 	}
 
 	// 3. Enforce 0600 regardless manual chmod
@@ -94,9 +93,9 @@ func AssertEnvPermissions() error {
 		return fmt.Errorf("cannot stat %s (run 'strix init' first): %w", envPath, statErr)
 	}
 
-	if perm := info.Mode().Perm(); perm != envPermission {
+	if perm := info.Mode().Perm(); perm&0077 != 0 {
 		return fmt.Errorf(
-			"SECURITY: %s has permissions %o (expected 0600). Run 'chmod 0600 %s' or 'strix init' to fix",
+			"SECURITY: %s has permissions %04o - group/other bits must be zero. Run 'chmod 0600 %s' to fix",
 			envPath, perm, envPath,
 		)
 	}
