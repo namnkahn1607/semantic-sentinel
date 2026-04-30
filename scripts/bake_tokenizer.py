@@ -14,7 +14,7 @@ from onnxruntime_extensions import gen_processing_models
 
 ROOT        = Path(__file__).resolve().parents[1]
 INPUT_ONNX  = ROOT / "engine/model/model_quint8_avx2.onnx"
-OUTPUT_ONNX = INPUT_ONNX.parent / "sentinel-minilm-with-tokenizer.onnx"
+OUTPUT_ONNX = INPUT_ONNX.parent / "strix-minilm-with-tokenizer.onnx"
 
 # Directly use BertTokenizer (not AutoTokenizer) so that gen_processing_models
 # recognizes the right class, avoiding "Unknown tokenizer".
