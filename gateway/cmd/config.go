@@ -3,14 +3,14 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
-var (
-	flagEndpoint string
-	flagAPIKey   string
-)
+var flagEndpoint string
 
 var configCmd = &cobra.Command{
 	Use:   "config",
@@ -31,10 +31,10 @@ var configSetCmd = &cobra.Command{
 }
 
 func init() {
-	configCmd.Flags().StringVar(&flagEndpoint, "endpoint", "", "base URL (required)")
-	configCmd.Flags().StringVar(&flagAPIKey, "apikey", "", "API key (required)")
-	_ = configCmd.MarkFlagRequired("endpoint")
-	_ = configCmd.MarkFlagRequired("apikey")
+	configSetCmd.Flags().StringVar(
+		&flagEndpoint, "endpoint", "", "base URL (required)",
+	)
+	_ = configSetCmd.MarkFlagRequired("endpoint")
 
 	configCmd.AddCommand(configSetCmd)
 }
@@ -44,13 +44,40 @@ func runConfigSet(_ *cobra.Command, _ []string) error {
 		return permErr
 	}
 
+	fmt.Print("[strix config] Enter API key: ")
+	rawKey, readErr := term.ReadPassword(int(os.Stdin.Fd()))
+	fmt.Println()
+	if readErr != nil {
+		return fmt.Errorf("cannot read API key from terminal: %w", readErr)
+	}
+
+	apiKey := strings.TrimSpace(string(rawKey))
+	emptyAPIKey := len(apiKey) == 0
+	emptyEndpoint := len(flagEndpoint) == 0
+
+	if emptyAPIKey && emptyEndpoint {
+		fmt.Println("[strix config] No credentials are updated.")
+		return nil
+	}
+
+	if emptyAPIKey || emptyEndpoint {
+		return fmt.Errorf("one of the credentials is empty")
+	}
+
 	envPath, pathErr := EnvFilePath()
 	if pathErr != nil {
 		return pathErr
 	}
 
-	content := fmt.Sprintf("ENDPOINT=%s\nAPI_KEY=%s\n", flagEndpoint, flagAPIKey)
-	if writeErr := os.WriteFile(envPath, []byte(content), envPermission); writeErr != nil {
+	currEnv, readErr := godotenv.Read(envPath)
+	if readErr != nil {
+		return fmt.Errorf("cannot parse %s: %w", envPath, readErr)
+	}
+
+	currEnv["API_KEY"] = apiKey
+	currEnv["ENDPOINT"] = flagEndpoint
+
+	if writeErr := godotenv.Write(currEnv, envPath); writeErr != nil {
 		return fmt.Errorf("cannot write to %s: %w", envPath, writeErr)
 	}
 
@@ -58,6 +85,6 @@ func runConfigSet(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("SECURITY: Cannot enforce 0600 after write: %w", chmodErr)
 	}
 
-	fmt.Printf("Credentials saved to %s\n", envPath)
+	fmt.Printf("[strix config] Credentials saved to %s\n", envPath)
 	return nil
 }
