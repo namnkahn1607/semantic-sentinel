@@ -1,9 +1,10 @@
 /gateway/.idea
-/engine/.idea
+/gateway/build
 
-/gateway/build-release
 /engine/.cache
+/engine/.idea
 /engine/build
-/engine/onnxruntime-extensions
+/engine/build-release
 
 /.venv
+/bin

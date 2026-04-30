@@ -54,6 +54,9 @@ target_link_libraries(strix_core PUBLIC
 # Total Executable
 add_executable(strix_engine src/main.cc)
 target_link_libraries(strix_engine PRIVATE strix_core)
+set_target_properties(strix_engine PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../bin"
+)
 
 # Testing Executables
 find_package(GTest CONFIG REQUIRED)
