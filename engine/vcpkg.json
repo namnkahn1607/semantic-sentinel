@@ -1,5 +1,5 @@
 {
-  "name": "sentinel-proxy",
+  "name": "strix-proxy",
   "version-string": "1.0",
   "dependencies": [
     "grpc",

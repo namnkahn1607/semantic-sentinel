@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(sentinel_engine VERSION 1.0)
+project(strix_engine VERSION 1.0)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -9,10 +9,10 @@ find_package(Protobuf CONFIG REQUIRED)
 find_package(gRPC CONFIG REQUIRED)
 find_package(onnxruntime CONFIG REQUIRED)
 
-add_library(sentinel_core STATIC
+add_library(strix_core STATIC
         # gRPC stubs files
-        pb/proto/sentinel.pb.cc
-        pb/proto/sentinel.grpc.pb.cc
+        pb/proto/strix.pb.cc
+        pb/proto/strix.grpc.pb.cc
         # Source files
         src/arena.cc
         src/embedder.cc
@@ -27,7 +27,7 @@ add_library(sentinel_core STATIC
         include/service.hh
 )
 
-target_compile_options(sentinel_core
+target_compile_options(strix_core
         PUBLIC
         -march=x86-64-v3 # AVX, AVX2, BMI1, BMI2, FMA and LZCNT enabled
         PRIVATE
@@ -39,12 +39,12 @@ target_compile_options(sentinel_core
         -Wunreachable-code # Unreachable code warnings
 )
 
-target_include_directories(sentinel_core PUBLIC
+target_include_directories(strix_core PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/pb
 )
 
-target_link_libraries(sentinel_core PUBLIC
+target_link_libraries(strix_core PUBLIC
         gRPC::grpc++
         gRPC::grpc++_reflection
         protobuf::libprotobuf
@@ -52,14 +52,14 @@ target_link_libraries(sentinel_core PUBLIC
 )
 
 # Total Executable
-find_package(GTest CONFIG REQUIRED)
-add_executable(sentinel_engine src/main.cc)
-target_link_libraries(sentinel_engine PRIVATE sentinel_core)
+add_executable(strix_engine src/main.cc)
+target_link_libraries(strix_engine PRIVATE strix_core)
 
 # Testing Executables
-add_executable(avx2_test tests/avx_math_test.cc)
+find_package(GTest CONFIG REQUIRED)
+add_executable(avx2_test tests/avx_test.cc)
 target_link_libraries(avx2_test PRIVATE
-        sentinel_core
+        strix_core
         GTest::gtest_main
         GTest::gtest
 )
@@ -71,6 +71,6 @@ gtest_discover_tests(avx2_test)
 find_package(benchmark CONFIG REQUIRED)
 add_executable(avx2_bench bench/avx_bench.cc)
 target_link_libraries(avx2_bench PRIVATE
-        sentinel_core
+        strix_core
         benchmark::benchmark
 )

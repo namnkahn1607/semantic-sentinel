@@ -1,8 +1,19 @@
-# sentinel/Makefile
+# strix/Makefile
 
 .PHONY: load-model bake-tokenizer config-engine build-engine run-engine build-gateway run-gateway build-docker run-prod stop-prod
 
 VCPKG_ROOT ?= $(HOME)/vcpkg
+VENV_PYTHON = ./venv/bin/python
+
+gen-dataclass:
+	@echo "Generating Go and C++ data classes for gRPC..."
+	@buf generate
+	@./engine/build-release/vcpkg_installed/x64-linux/tools/protobuf/protoc \
+  	-I=api/proto/ \
+  	--cpp_out=engine/pb/proto/ \
+  	--grpc_out=engine/pb/proto/ \
+  	--plugin=protoc-gen-grpc=./engine/build-release/vcpkg_installed/x64-linux/tools/grpc/grpc_cpp_plugin \
+	strix.proto
 
 load-model:
 	@echo "Getting all-MiniLM-L6-v2 Inference Model from HuggingFace..."
@@ -10,7 +21,7 @@ load-model:
 
 bake-tokenizer:
 	@echo "Baking Tokenizer into the model..."
-	@cd scripts && python bake_tokenizer.py
+	@cd scripts && python3 bake_tokenizer.py
 
 config-engine:
 	@echo "Configuring C++ Semantic Engine (Release)..."
@@ -28,9 +39,9 @@ build-engine: config-engine
 
 run-engine:
 	@echo "Starting C++ Semantic Engine (Release)..."
-	@INFERENCE_MODEL_PATH="$(PWD)/engine/model/sentinel-minilm-with-tokenizer.onnx" \
+	@INFERENCE_MODEL_PATH="$(PWD)/engine/model/strix-minilm-with-tokenizer.onnx" \
 	ORT_EXTENSIONS_PATH="$(PWD)/engine/model/libortextensions.so" \
-	./engine/build-release/sentinel_engine
+	./engine/build-release/strix_engine
 
 build-gateway:
 	@echo "Building Go Gateway..."
@@ -50,25 +61,25 @@ gateway-100-10k:
 
 engine-50-100k:
 	@echo "Shooting 100k requests (Concurrency: 50) directly at C++ Semantic Engine..."
-	@ghz --insecure --proto ./api/proto/sentinel.proto --call proto.SemanticService.CheckCache -d '{"prompt_text": "hello"}' -c 50 -n 100000 unix:///tmp/sentinel.sock
+	@ghz --insecure --proto ./api/proto/strix.proto --call proto.SemanticService.CheckCache -d '{"prompt_text": "hello"}' -c 50 -n 100000 unix:///tmp/strix.sock
 
 build-docker: build-gateway build-engine
-	@echo "Packaging Sentinel into Docker Image..."
-	@docker build -t sentinel-prod .
+	@echo "Packaging Strix into Docker Image..."
+	@docker build -t strix-prod .
 
 run-prod:
-	@echo "Deploying Sentinel to Docker..."
+	@echo "Deploying Strix to Docker..."
 	@echo "Physical Constraints: 4 vCPUs (Cores 0-3), 8GB RAM Strict Limit"
 	@docker run -it --rm \
-		--name sentinel-instance \
+		--name strix-instance \
 		--cpuset-cpus="0-3" \
 		--memory="8g" \
 		-v $(PWD)/engine/model:/app/model \
-		-e INFERENCE_MODEL_PATH="/app/model/sentinel-minilm-with-tokenizer.onnx" \
+		-e INFERENCE_MODEL_PATH="/app/model/strix-minilm-with-tokenizer.onnx" \
 		-e ORT_EXTENSIONS_PATH="/app/model/libortextensions.so" \
 		-p 8080:8080 \
-		sentinel-prod
+		strix-prod
 
 stop-prod:
-	@echo "Terminating Sentinel container..."
-	@docker stop sentinel-instance || true
+	@echo "Terminating Strix container..."
+	@docker stop strix-instance || true
