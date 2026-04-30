@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"sync"
 	"syscall"
 	"time"
@@ -23,7 +24,7 @@ import (
 )
 
 const (
-	socketAddress = "unix:///tmp/sentinel.sock"
+	socketAddress = "unix:///tmp/strix.sock"
 	endpoint      = "/v1/cache/check"
 	serverPort    = ":8080"
 	maxFD         = 65536
@@ -43,18 +44,24 @@ var serveCmd = &cobra.Command{
 	Short: "Start the HTTP Gateway as supervisor and Vector Engine",
 	Long: `Loads ~/.strix/.env, forks Vector Engine, and starts HTTP Gateway
 	in the current process. Acts as a supervisor: on SIGTERM or SIGINT
-	it shuts down the HTTP server gracefully, thus causing its child process 
-	Vector Engine to exit gracefully on its own.`,
+	it shuts down the HTTP server gracefully, then the Death Pipe EOF signal
+	causes the Vector Engine to exit cleanly on its own.`,
 	RunE: runServe,
 }
 
-func init() {
-	serveCmd.Flags().StringVar(
-		&VectorEngineBinPath,
-		"engine",
-		"./vector_engine",
-		"Path to the Vector Engine binary",
-	)
+// strix/
+// ├── bin/
+// │   ├── strix_gateway  <- os.Executable()
+// │   └── strix_engine
+// └── engine/
+//	   └── model/
+//	       ├── strix-minilm-with-tokenizer.onnx
+//	       └── libortextensions.so
+
+type projectPaths struct {
+	engineBinary string // strix/bin/strix_engine
+	modelPath    string // strix/engine/model/strix-minilm-with-tokenizer.onnx
+	ortLibPath   string // strix/engine/model/libortextensions.so
 }
 
 func runServe(_ *cobra.Command, _ []string) error {
@@ -71,7 +78,17 @@ func runServe(_ *cobra.Command, _ []string) error {
 		return fdErr
 	}
 
-	// 2. Load ~/.strix/.env onto the process environment.
+	// 2. Resolve artifact paths.
+	paths, pathErr := resolvePaths()
+	if pathErr != nil {
+		return pathErr
+	}
+
+	log.Printf("[strix serve] Vector Engine binary: %s\n", paths.engineBinary)
+	log.Printf("[strix serve] Inference model: %s\n", paths.modelPath)
+	log.Printf("[strix serve] ORT extensions library: %s\n", paths.ortLibPath)
+
+	// 3. Load ~/.strix/.env into the process environment.
 	envPath, pathErr := EnvFilePath()
 	if pathErr != nil {
 		return pathErr
@@ -83,25 +100,57 @@ func runServe(_ *cobra.Command, _ []string) error {
 
 	log.Println("[strix serve] Configuration loaded from .env")
 
-	// 3. Fork a C++ process running Vector Engine.
-	engineCmd := exec.Command(VectorEngineBinPath)
-	engineCmd.Stdout = os.Stdout
-	engineCmd.Stdin = os.Stdin
-
-	// Whenever the parent process dies, its children also die.
-	engineCmd.SysProcAttr = &syscall.SysProcAttr{
-		Pdeathsig: syscall.SIGTERM,
+	// 4. Fork a C++ process running Vector Engine.
+	reader, writer, pipeErr := os.Pipe()
+	if pipeErr != nil {
+		return fmt.Errorf("cannot create Death Pipe: %w", pipeErr)
 	}
 
-	if startErr := engineCmd.Start(); startErr != nil {
+	engineProc := exec.Command(VectorEngineBinPath)
+	engineProc.ExtraFiles = []*os.File{reader}
+	engineProc.Stdout = os.Stdout
+	engineProc.Stderr = os.Stderr
+	engineProc.Env = []string{
+		"INFERENCE_MODEL_PATH=" + paths.modelPath,
+		"ORT_EXTENSIONS_PATH=" + paths.ortLibPath,
+	}
+
+	if startErr := engineProc.Start(); startErr != nil {
+		_ = reader.Close()
+		_ = writer.Close()
+
 		return fmt.Errorf("cannot start Vector Engine at %q: %w",
 			VectorEngineBinPath, startErr,
 		)
 	}
 
-	log.Printf("[strix serve] Vector Engine started (PID %d)", engineCmd.Process.Pid)
+	log.Printf("[strix serve] Vector Engine started (PID %d)", engineProc.Process.Pid)
 
-	// 4. Initialize L1 Exact-match Cache.
+	defer func() {
+		if closeErr := writer.Close(); closeErr != nil {
+			log.Printf(
+				"[strix serve] CRITICAL: Death Pipe Write-end close failed: %v. "+
+					"Sending SIGTERM as fallback\n",
+				closeErr,
+			)
+
+			_ = engineProc.Process.Signal(syscall.SIGTERM)
+		}
+	}()
+
+	if closeErr := reader.Close(); closeErr != nil {
+		return fmt.Errorf("cannot close Read-end of the Death Pipe: %v", closeErr)
+	}
+
+	go func() {
+		if waitErr := engineProc.Wait(); waitErr != nil {
+			log.Printf("[strix serve] Vector Engine exited: %v", waitErr)
+		} else {
+			log.Println("[strix serve] Vector Engine exited cleanly.")
+		}
+	}()
+
+	// 5. Initialize L1 Exact-match Cache.
 	log.Printf(
 		"[strix serve] Allocating %dMB off-heap memory for L1 Fast Cache...\n",
 		l1CacheSize/(1024*1024),
@@ -109,7 +158,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 	l1Cache := fastcache.New(l1CacheSize)
 	defer l1Cache.Reset()
 
-	// 5.1. Open a single gRPC connection to Vector Engine
+	// 6.1. Open a single gRPC connection to Vector Engine
 	conn, connErr := grpc.NewClient(
 		socketAddress, grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -125,10 +174,10 @@ func runServe(_ *cobra.Command, _ []string) error {
 		}
 	}()
 
-	// 5.2. Create only ONE Vector Engine stub.
+	// 6.2. Create only ONE Vector Engine stub.
 	clientStub := pb.NewSemanticServiceClient(conn)
 
-	// 6. Perform high concurrent warming up mechanism
+	// 7. Perform high concurrent warming up mechanism
 	log.Println("Starting functional warm-up (Thread Pool expansion)...")
 	pingCtx, pingCancel := context.WithTimeout(context.Background(), warmUpTimeout)
 	if _, pingErr := clientStub.CheckCache(
@@ -152,7 +201,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 	wg.Wait()
 	log.Println("[strix serve] Warm-up completed.")
 
-	// 7. Register router (Server Mux).
+	// 8. Register router (Server Mux).
 	mux := http.NewServeMux()
 	mux.HandleFunc(endpoint, internal.HandleCheckCache(clientStub, l1Cache))
 
@@ -165,7 +214,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 		WriteTimeout:      10 * time.Second,
 	}
 
-	// 8. Create OS Signal listener.
+	// 9. Create OS Signal listener.
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
@@ -188,7 +237,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 		)
 	}
 
-	// 9. HTTP Gateway graceful shutdown.
+	// 10. HTTP Gateway graceful shutdown.
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer shutdownCancel()
 
@@ -220,4 +269,31 @@ func openMoreFD() error {
 	}
 
 	return nil
+}
+
+func resolvePaths() (projectPaths, error) {
+	execDir, dirErr := os.Executable()
+	if dirErr != nil {
+		return projectPaths{}, fmt.Errorf("cannot resolve executable path: %w", dirErr)
+	}
+
+	execDir, symErr := filepath.EvalSymlinks(execDir)
+	if symErr != nil {
+		return projectPaths{}, fmt.Errorf(
+			"cannot eval symlink on executable path: %w", symErr,
+		)
+	}
+
+	// Move one level up from bin/ to strix/
+	projectRoot := filepath.Join(filepath.Dir(execDir), "..")
+
+	return projectPaths{
+		engineBinary: filepath.Join(projectRoot, "bin", "strix_engine"),
+		modelPath: filepath.Join(
+			projectRoot, "engine", "model", "strix-minilm-with-tokenizer.onnx",
+		),
+		ortLibPath: filepath.Join(
+			projectRoot, "engine", "model", "libortextensions.so",
+		),
+	}, nil
 }
