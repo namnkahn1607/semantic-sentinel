@@ -12,7 +12,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"sync"
 	"syscall"
 	"time"
 
@@ -189,16 +188,6 @@ func runServe(_ *cobra.Command, _ []string) error {
 
 	pingCancel()
 
-	var wg sync.WaitGroup
-	for range warmUpConcurrency {
-		wg.Go(func() {
-			burstCtx, burstCancel := context.WithTimeout(context.Background(), coldStartTimeout)
-			defer burstCancel()
-			_, _ = clientStub.CheckCache(burstCtx, &pb.CheckCacheRequest{Prompt: "warm-up burst"})
-		})
-	}
-
-	wg.Wait()
 	log.Println("[strix serve] Warm-up completed.")
 
 	// 8. Register router (Server Mux).

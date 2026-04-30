@@ -4,13 +4,34 @@
 #include <thread>
 
 #include "arena.hh"
+#include "avx_math.hh"
 #include "constant.hh"
+#include "embedder.hh"
 #include "service.hh"
 
 std::atomic g_shutdown_requested{false};
 
 void SignalHandler([[maybe_unused]] const int sig) {
     g_shutdown_requested.store(true, std::memory_order_relaxed);
+}
+
+static void WarmUpEngine() {
+    std::cout << "[Engine] Warming up ONNX runtime..." << std::endl;
+
+    const auto& embedder = Embedder::GetInstance();
+    constexpr int32_t WARM_UP_ROUNDS = 3;
+    const std::string dummy_prompt = "Hello, World";
+
+    AlignedVector dummy_vec;
+    for (int32_t i = 0; i < WARM_UP_ROUNDS; ++i) {
+        dummy_vec = embedder.Encode(dummy_prompt);
+    }
+
+    if (dummy_vec) {
+        CosineSimilarity(dummy_vec.get(), dummy_vec.get());
+    }
+
+    std::cout << "[Engine] Warm-up completed." << std::endl;
 }
 
 void RunServer(MemoryArena& arena) {
@@ -65,11 +86,13 @@ void RunServer(MemoryArena& arena) {
 }
 
 int main() {
+    std::signal(SIGINT, SignalHandler);
+    std::signal(SIGTERM, SignalHandler);
+
     // Main Thread is responsible for construct & deconstruct Memory Arena.
     const auto memory_arena = std::make_unique<MemoryArena>();
 
-    std::signal(SIGINT, SignalHandler);
-    std::signal(SIGTERM, SignalHandler);
+    WarmUpEngine();
 
     std::cout << "[Vector Engine] Opening to gRPC..." << std::endl;
     RunServer(*memory_arena);
