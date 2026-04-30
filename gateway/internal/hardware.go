@@ -6,6 +6,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -18,13 +20,31 @@ func Enforce() error {
 		return ramErr
 	}
 
-	applyCPULimit()
-	return nil
+	return pinProcToCPU(applyCPULimit())
 }
 
-func applyCPULimit() {
-	numCPUs := runtime.NumCPU()
-	runtime.GOMAXPROCS(min(maxVirtualCPU, numCPUs/2))
+func applyCPULimit() (procCPUs int) {
+	sysCPUs := runtime.NumCPU()
+
+	if sysCPUs == 1 {
+		procCPUs = 1
+	} else {
+		procCPUs = min(maxVirtualCPU, sysCPUs/2)
+	}
+
+	runtime.GOMAXPROCS(procCPUs)
+	return
+}
+
+func pinProcToCPU(procCPUs int) error {
+	var cpuSet unix.CPUSet
+	cpuSet.Zero()
+
+	for i := range procCPUs {
+		cpuSet.Set(i)
+	}
+
+	return unix.SchedSetaffinity(os.Getpid(), &cpuSet)
 }
 
 func checkRAM() error {
