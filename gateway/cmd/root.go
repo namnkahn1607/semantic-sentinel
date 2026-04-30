@@ -18,7 +18,7 @@ var rootCmd = &cobra.Command{
 // Execute is the single entry point called by main.go.
 func Execute() {
 	if execErr := rootCmd.Execute(); execErr != nil {
-		fmt.Printf("[strix] Entry point error: %v", execErr)
+		fmt.Printf("[strix] Entry point error: %v\n", execErr)
 		os.Exit(1)
 	}
 }
