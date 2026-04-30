@@ -2,8 +2,8 @@
 // Created by nlnk on Mar 5, 26.
 //
 
-#ifndef SENTINEL_ENGINE_CONSTANT_HH
-#define SENTINEL_ENGINE_CONSTANT_HH
+#ifndef STRIX_ENGINE_CONSTANT_HH
+#define STRIX_ENGINE_CONSTANT_HH
 
 #include <cstdint>
 #include <cstdlib>
@@ -35,4 +35,4 @@ inline constexpr uint64_t HIGH_WATERMARK_THRESHOLD =
 inline constexpr uint32_t HIGH_GC_SLEEP_MS = 1;
 }  // namespace engine
 
-#endif  // SENTINEL_ENGINE_CONSTANT_HH
+#endif  // STRIX_ENGINE_CONSTANT_HH

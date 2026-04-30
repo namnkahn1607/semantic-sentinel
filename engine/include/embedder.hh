@@ -2,8 +2,8 @@
 // Created by nlnk on Mar 1, 26.
 //
 
-#ifndef SENTINEL_ENGINE_EMBEDDER_HH
-#define SENTINEL_ENGINE_EMBEDDER_HH
+#ifndef STRIX_ENGINE_EMBEDDER_HH
+#define STRIX_ENGINE_EMBEDDER_HH
 
 #include <onnxruntime/onnxruntime_cxx_api.h>
 
@@ -38,4 +38,4 @@ private:
     ~Embedder() = default;
 };
 
-#endif  // SENTINEL_ENGINE_EMBEDDER_HH
+#endif  // STRIX_ENGINE_EMBEDDER_HH

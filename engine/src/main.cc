@@ -14,8 +14,8 @@ void SignalHandler([[maybe_unused]] const int sig) {
 }
 
 void RunServer(MemoryArena& arena) {
-    const std::string server_address{"unix:///tmp/sentinel.sock"};
-    const auto socket_directory{"/tmp/sentinel.sock"};
+    const std::string server_address{"unix:///tmp/strix.sock"};
+    const auto socket_directory{"/tmp/strix.sock"};
 
     // Clear out old socket file from previous process run
     // before binding into new one.

@@ -2,8 +2,8 @@
 // Created by nlnk on Apr 19, 26.
 //
 
-#ifndef SENTINEL_ENGINE_NODE_HH
-#define SENTINEL_ENGINE_NODE_HH
+#ifndef STRIX_ENGINE_NODE_HH
+#define STRIX_ENGINE_NODE_HH
 
 #include <atomic>
 
@@ -59,4 +59,4 @@ struct alignas(64) MetaNode {
     }
 };
 
-#endif  // SENTINEL_ENGINE_NODE_HH
+#endif  // STRIX_ENGINE_NODE_HH

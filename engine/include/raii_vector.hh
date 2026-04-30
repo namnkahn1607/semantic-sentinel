@@ -2,8 +2,8 @@
 // Created by nlnk on Apr 21, 26.
 //
 
-#ifndef SENTINEL_ENGINE_RAII_VECTOR_HH
-#define SENTINEL_ENGINE_RAII_VECTOR_HH
+#ifndef STRIX_ENGINE_RAII_VECTOR_HH
+#define STRIX_ENGINE_RAII_VECTOR_HH
 
 #include <memory>
 
@@ -23,4 +23,4 @@ using AlignedVector = std::unique_ptr<float[], AlignedFree>;
     return AlignedVector{static_cast<float*>(ptr)};
 }
 
-#endif  // SENTINEL_ENGINE_RAII_VECTOR_HH
+#endif  // STRIX_ENGINE_RAII_VECTOR_HH

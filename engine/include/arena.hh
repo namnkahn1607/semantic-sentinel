@@ -2,8 +2,8 @@
 // Created by nlnk on Apr 16, 26.
 //
 
-#ifndef SENTINEL_ENGINE_ARENA_HH
-#define SENTINEL_ENGINE_ARENA_HH
+#ifndef STRIX_ENGINE_ARENA_HH
+#define STRIX_ENGINE_ARENA_HH
 
 #include <atomic>
 
@@ -65,4 +65,4 @@ private:
     uint64_t AllocatePayload(uint32_t length);
 };
 
-#endif  // SENTINEL_ENGINE_ARENA_HH
+#endif  // STRIX_ENGINE_ARENA_HH

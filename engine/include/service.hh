@@ -2,10 +2,10 @@
 // Created by nlnk on Apr 17, 26.
 //
 
-#ifndef SENTINEL_ENGINE_SERVICE_HH
-#define SENTINEL_ENGINE_SERVICE_HH
+#ifndef STRIX_ENGINE_SERVICE_HH
+#define STRIX_ENGINE_SERVICE_HH
 
-#include "proto/sentinel.grpc.pb.h"
+#include "proto/strix.grpc.pb.h"
 
 class MemoryArena;
 
@@ -30,4 +30,4 @@ private:
     MemoryArena& memory_arena;
 };
 
-#endif  // SENTINEL_ENGINE_SERVICE_HH
+#endif  // STRIX_ENGINE_SERVICE_HH

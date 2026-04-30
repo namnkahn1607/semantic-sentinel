@@ -2,8 +2,8 @@
 // Created by nlnk on Apr 20, 26.
 //
 
-#ifndef SENTINEL_ENGINE_AVX_MATH_HH
-#define SENTINEL_ENGINE_AVX_MATH_HH
+#ifndef STRIX_ENGINE_AVX_MATH_HH
+#define STRIX_ENGINE_AVX_MATH_HH
 
 /* AMD/Intel x86 */
 #if defined(__x86_64__) || defined(_M_X64)
@@ -74,4 +74,4 @@ inline float CosineSimilarity(const float* query, const float* node_vector) {
 
 #endif
 
-#endif  // SENTINEL_ENGINE_AVX_MATH_HH
+#endif  // STRIX_ENGINE_AVX_MATH_HH
