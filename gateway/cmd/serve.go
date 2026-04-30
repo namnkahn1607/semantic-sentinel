@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -19,7 +20,9 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -28,10 +31,9 @@ const (
 	serverPort    = ":8080"
 	maxFD         = 65536
 
-	warmUpConcurrency = 100
-	warmUpTimeout     = 50 * time.Millisecond
-	coldStartTimeout  = 100 * time.Millisecond
-	shutdownTimeout   = 3 * time.Second
+	pollInterval    = 100 * time.Millisecond
+	pollTimeout     = 10 * time.Second
+	shutdownTimeout = 3 * time.Second
 
 	l1CacheSize = 256 * 1024 * 1024
 )
@@ -109,10 +111,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 	engineProc.ExtraFiles = []*os.File{reader}
 	engineProc.Stdout = os.Stdout
 	engineProc.Stderr = os.Stderr
-	engineProc.Env = []string{
-		"INFERENCE_MODEL_PATH=" + paths.modelPath,
-		"ORT_EXTENSIONS_PATH=" + paths.ortLibPath,
-	}
+	engineProc.Env = buildEngineEnv(paths)
 
 	if startErr := engineProc.Start(); startErr != nil {
 		_ = reader.Close()
@@ -129,7 +128,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 		if closeErr := writer.Close(); closeErr != nil {
 			log.Printf(
 				"[strix serve] CRITICAL: Death Pipe Write-end close failed: %v. "+
-					"Sending SIGTERM as fallback\n",
+					"Sending SIGTERM as fallback...\n",
 				closeErr,
 			)
 
@@ -145,7 +144,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 		if waitErr := engineProc.Wait(); waitErr != nil {
 			log.Printf("[strix serve] Vector Engine exited: %v", waitErr)
 		} else {
-			log.Println("[strix serve] Vector Engine exited cleanly.")
+			log.Println("[strix serve] Vector Engine exited cleanly")
 		}
 	}()
 
@@ -167,28 +166,20 @@ func runServe(_ *cobra.Command, _ []string) error {
 
 	defer func() {
 		if closeErr := conn.Close(); closeErr != nil {
-			log.Printf("[Serve] gRPC connection close error: %v\n", closeErr)
+			log.Printf("[strix serve] gRPC connection close error: %v\n", closeErr)
 		} else {
-			log.Println("[Serve] gRPC connection closed.")
+			log.Println("[strix serve] gRPC connection closed.")
 		}
 	}()
 
 	// 6.2. Create only ONE Vector Engine stub.
 	clientStub := pb.NewSemanticServiceClient(conn)
 
-	// 7. Perform high concurrent warming up mechanism
-	log.Println("Starting functional warm-up (Thread Pool expansion)...")
-	pingCtx, pingCancel := context.WithTimeout(context.Background(), warmUpTimeout)
-	if _, pingErr := clientStub.CheckCache(
-		pingCtx, &pb.CheckCacheRequest{Prompt: "warm-up signal"},
-	); pingErr != nil {
-		pingCancel()
-		return fmt.Errorf("warm-up ping failed: %w", pingErr)
+	// 7. Perform polling (ping request) on Vector Engine.
+	log.Println("[strix serve] Waiting for Vector Engine to become ready...")
+	if pollErr := waitForEngine(context.Background(), clientStub); pollErr != nil {
+		return pollErr
 	}
-
-	pingCancel()
-
-	log.Println("[strix serve] Warm-up completed.")
 
 	// 8. Register router (Server Mux).
 	mux := http.NewServeMux()
@@ -249,11 +240,11 @@ func openMoreFD() error {
 		rLimit.Max = max(rLimit.Max, maxFD)
 		if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit); err != nil {
 			log.Printf(
-				"[strix serve] OS refused to raise ulimit - may crash under high load: %v\n",
+				"[strix serve] OS refused to raise ulimit - may crash under high load: %v.\n",
 				err,
 			)
 		} else {
-			log.Printf("[strix serve] FD limit raised to %d\n", maxFD)
+			log.Printf("[strix serve] FD limit raised to %d.\n", maxFD)
 		}
 	}
 
@@ -269,7 +260,7 @@ func resolvePaths() (projectPaths, error) {
 	execDir, symErr := filepath.EvalSymlinks(execDir)
 	if symErr != nil {
 		return projectPaths{}, fmt.Errorf(
-			"cannot eval symlink on executable path: %w", symErr,
+			"cannot evaluate symlink on executable path: %w", symErr,
 		)
 	}
 
@@ -285,4 +276,51 @@ func resolvePaths() (projectPaths, error) {
 			projectRoot, "engine", "model", "libortextensions.so",
 		),
 	}, nil
+}
+
+func buildEngineEnv(paths projectPaths) []string {
+	base := os.Environ()
+	env := make([]string, 0, len(base)+2)
+
+	for _, kv := range base {
+		if strings.HasPrefix(kv, "API_KEY=") {
+			continue
+		}
+
+		env = append(env, kv)
+	}
+
+	env = append(env,
+		"INFERENCE_MODEL_PATH="+paths.modelPath,
+		"ORT_EXTENSIONS_PATH="+paths.ortLibPath,
+	)
+
+	return env
+}
+
+func waitForEngine(ctx context.Context, stub pb.SemanticServiceClient) error {
+	deadline := time.Now().Add(pollTimeout)
+
+	for attempt := 1; time.Now().Before(deadline); attempt++ {
+		pingCtx, pingCancel := context.WithTimeout(ctx, pollInterval)
+		_, pingErr := stub.CheckCache(pingCtx, &pb.CheckCacheRequest{Prompt: "health_check"})
+		pingCancel()
+
+		if pingErr == nil {
+			log.Printf("[strix serve] Vector Engine ready after %d poll(s).\n", attempt)
+			return nil
+		}
+
+		if status.Code(pingErr) != codes.Unavailable {
+			return fmt.Errorf("unexpected error in Vector Engine: %w", pingErr)
+		}
+
+		log.Printf(
+			"[strix serve] Vector Engine not ready yet (attempt %d). Retrying in %s...\n",
+			attempt, pollInterval,
+		)
+		time.Sleep(pollInterval)
+	}
+
+	return fmt.Errorf("FATAL: unready Vector Engine after %s second(s)", pollTimeout)
 }
