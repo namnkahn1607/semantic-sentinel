@@ -48,7 +48,16 @@ type CheckCacheAPIRequest struct {
 func HandleService(
 	stub pb.SemanticServiceClient, l0Cache *fastcache.Cache, fatalErrChan chan<- error,
 ) http.HandlerFunc {
-	llmClient := &http.Client{Timeout: LLMForwardTimeout}
+	llmTransport := &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 100,
+		IdleConnTimeout:     90 * time.Second,
+	}
+
+	llmClient := &http.Client{
+		Timeout:   LLMForwardTimeout,
+		Transport: llmTransport,
+	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		// 1. Validates the request method to be POST.
