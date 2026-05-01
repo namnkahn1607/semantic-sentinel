@@ -13,29 +13,35 @@ const (
 	maxVirtualCPU = 4
 )
 
-func Enforce() error {
-	if ramErr := checkRAM(); ramErr != nil {
-		return ramErr
+// ApplyGoLimits sets GOMAXPROCS based on system's total CPUs
+// and return it as integer.
+func ApplyGoLimits() (goCores int) {
+	totalCores := runtime.NumCPU()
+	if totalCores < 2 {
+		runtime.GOMAXPROCS(1)
+		return 1
 	}
 
-	applyCPULimit()
-	return nil
+	goCores = min(maxVirtualCPU, totalCores/2)
+	runtime.GOMAXPROCS(goCores)
+	return goCores
 }
 
-func applyCPULimit() {
-	sysCPUs := runtime.NumCPU()
+// GenCppLimits generates a taskset -c flag argument used for
+// Vector Engine based on number of allocated CPUs for HTTP Gateway.
+func GenCppLimits(goCores int) string {
+	totalCores := runtime.NumCPU()
 
-	var procCPUs int
-	if sysCPUs == 1 {
-		procCPUs = 1
-	} else {
-		procCPUs = min(maxVirtualCPU, sysCPUs/2)
+	cppCores := make([]string, 0, totalCores-goCores)
+	for i := goCores; i < totalCores; i++ {
+		cppCores = append(cppCores, strconv.Itoa(i))
 	}
 
-	runtime.GOMAXPROCS(procCPUs)
+	return strings.Join(cppCores, ",")
 }
 
-func checkRAM() error {
+// CheckRAM checks if the system has sufficient amount of RAM (>= 8GB).
+func CheckRAM() error {
 	memData, readErr := os.ReadFile("/proc/meminfo")
 	if readErr != nil {
 		return fmt.Errorf("cannot read /proc/meminfo: %w", readErr)

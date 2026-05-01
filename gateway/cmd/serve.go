@@ -38,8 +38,6 @@ const (
 	l1CacheSize = 256 * 1024 * 1024
 )
 
-var VectorEngineBinPath string
-
 var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Start the HTTP Gateway as supervisor and Vector Engine",
@@ -66,18 +64,23 @@ type projectPaths struct {
 }
 
 func runServe(_ *cobra.Command, _ []string) error {
-	// 1. Permission & hardware checks and FD expansion.
+	// 1. Permission & RAM checks and FD expansion.
 	if permErr := AssertEnvPermissions(); permErr != nil {
 		return permErr
 	}
 
-	if hardwareErr := internal.Enforce(); hardwareErr != nil {
-		return hardwareErr
+	if ramErr := internal.CheckRAM(); ramErr != nil {
+		return ramErr
 	}
 
 	if fdErr := openMoreFD(); fdErr != nil {
 		return fdErr
 	}
+
+	// 2. Calculate CPU affinity ratio for each process.
+	goCores := internal.ApplyGoLimits()
+	log.Printf("[strix serve] GOMAXPROCS = %d\n", goCores)
+	cppCoresStr := internal.GenCppLimits(goCores)
 
 	// 2. Resolve artifact paths.
 	paths, pathErr := resolvePaths()
@@ -107,7 +110,9 @@ func runServe(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("cannot create Death Pipe: %w", pipeErr)
 	}
 
-	engineProc := exec.Command(VectorEngineBinPath)
+	engineProc := exec.Command("taskset", "-c", cppCoresStr, paths.engineBinary)
+	fmt.Printf("Pinned Vector Engine to cores (via taskset): %s\n", cppCoresStr)
+
 	engineProc.ExtraFiles = []*os.File{reader}
 	engineProc.Stdout = os.Stdout
 	engineProc.Stderr = os.Stderr
@@ -118,7 +123,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 		_ = writer.Close()
 
 		return fmt.Errorf("cannot start Vector Engine at %q: %w",
-			VectorEngineBinPath, startErr,
+			paths.engineBinary, startErr,
 		)
 	}
 
@@ -225,7 +230,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("server shutdown failed: %w", shutdownErr)
 	}
 
-	log.Println("[strix serve] HTTP Server stopped.")
+	log.Println("[strix serve] HTTP Server stopped")
 	return nil
 }
 
@@ -240,11 +245,11 @@ func openMoreFD() error {
 		rLimit.Max = max(rLimit.Max, maxFD)
 		if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit); err != nil {
 			log.Printf(
-				"[strix serve] OS refused to raise ulimit - may crash under high load: %v.\n",
+				"[strix serve] OS refused to raise ulimit - may crash under high load: %v\n",
 				err,
 			)
 		} else {
-			log.Printf("[strix serve] FD limit raised to %d.\n", maxFD)
+			log.Printf("[strix serve] FD limit raised to %d\n", maxFD)
 		}
 	}
 
