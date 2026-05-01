@@ -20,12 +20,12 @@ import (
 const (
 	ServiceTimeout = 50 * time.Millisecond
 
-	LLMCallTimeout = 10 * time.Second
+	LLMForwardTimeout = 10 * time.Second
 
 	maxReaderSize = 1024 * 1024
 	maxPromptLen  = 512
 
-	maxL1PayloadSize = 64 * 1024
+	maxL0PayloadSize = 64 * 1024
 )
 
 var (
@@ -42,13 +42,13 @@ type CheckCacheAPIRequest struct {
 // HandleService returns an http.HandlerFunc that:
 //  1. Validates the request method to be POST.
 //  2. Decodes the JSON body.
-//  3. Computes SHA-256 hash of the prompt and queries the L1 exact-match cache.
+//  3. Computes SHA-256 hash of the prompt and queries the L0 exact-match cache.
 //  4. Falls through to the LLM provider for long prompts (> 512 bytes).
 //  5. Falls through to the Vector Engine for short prompts.
 func HandleService(
-	stub pb.SemanticServiceClient, l1Cache *fastcache.Cache, fatalErrChan chan<- error,
+	stub pb.SemanticServiceClient, l0Cache *fastcache.Cache, fatalErrChan chan<- error,
 ) http.HandlerFunc {
-	llmClient := &http.Client{Timeout: LLMCallTimeout}
+	llmClient := &http.Client{Timeout: LLMForwardTimeout}
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		// 1. Validates the request method to be POST.
@@ -71,9 +71,9 @@ func HandleService(
 		hash := sha256.Sum256(promptBytes)
 		hashKey := hash[:]
 
-		// 3.2. Check on L1 Fast Cache using hashcode. If hit, return immediately.
-		if l1ExactPayload := l1Cache.Get(nil, hashKey); l1ExactPayload != nil {
-			writePayload(w, l1ExactPayload)
+		// 3.2. Check on L0 Fast Cache using hashcode. If hit, return immediately.
+		if matchedPayload := l0Cache.Get(nil, hashKey); matchedPayload != nil {
+			writePayload(w, matchedPayload)
 			return
 		}
 
@@ -86,12 +86,7 @@ func HandleService(
 			}
 
 			writePayload(w, llmPayload)
-
-			// fastcache.Set() is lock-free and uses memcopy at the OS level.
-			if len(llmPayload) <= maxL1PayloadSize {
-				l1Cache.Set(hashKey, llmPayload)
-			}
-
+			trySetL0(l0Cache, hashKey, llmPayload)
 			return
 		}
 
@@ -109,11 +104,7 @@ func HandleService(
 			}
 
 			writePayload(w, llmPayload)
-
-			if len(llmPayload) <= maxL1PayloadSize {
-				l1Cache.Set(hashKey, llmPayload)
-			}
-
+			trySetL0(l0Cache, hashKey, llmPayload)
 			return
 		}
 
@@ -121,9 +112,6 @@ func HandleService(
 		switch grpcRes.GetCheckState() {
 		case pb.CacheState_CACHE_STATE_HIT:
 			writePayload(w, []byte(grpcRes.GetCachedPayload()))
-
-		case pb.CacheState_CACHE_STATE_PENDING:
-			// TODO: Implement Promise Registry
 
 		case pb.CacheState_CACHE_STATE_MISS:
 			llmPayload, llmErr := forwardToLLM(r.Context(), llmClient, apiReq.LLMBody)
@@ -133,14 +121,20 @@ func HandleService(
 			}
 
 			writePayload(w, llmPayload)
+			trySetL0(l0Cache, hashKey, llmPayload)
 
-			if len(llmPayload) <= maxL1PayloadSize {
-				l1Cache.Set(hashKey, llmPayload)
-			}
+			_ = grpcRes.GetNodeId()
 
 			// TODO: Implement Worker Pool doing SetCache()
 
+		case pb.CacheState_CACHE_STATE_PENDING:
+			// TODO: Implement Promise Registry
+
 		default:
+			log.Printf(
+				"Unexpected Check Cache state %v. Falling back to LLM",
+				grpcRes.GetCheckState(),
+			)
 			llmPayload, llmErr := forwardToLLM(r.Context(), llmClient, apiReq.LLMBody)
 			if llmErr != nil {
 				handleLLMError(w, llmErr, fatalErrChan)
@@ -148,10 +142,7 @@ func HandleService(
 			}
 
 			writePayload(w, llmPayload)
-
-			if len(llmPayload) <= maxL1PayloadSize {
-				l1Cache.Set(hashKey, llmPayload)
-			}
+			trySetL0(l0Cache, hashKey, llmPayload)
 		}
 	}
 }
@@ -163,9 +154,14 @@ func writePayload(w http.ResponseWriter, payload []byte) {
 	}
 }
 
-func forwardToLLM(
-	ctx context.Context, client *http.Client, llmBody string,
-) (payload []byte, err error) {
+func trySetL0(cache *fastcache.Cache, key, payload []byte) {
+	if len(payload) < maxL0PayloadSize {
+		// fastcache.Set() is lock-free and uses memcopy at the OS level.
+		cache.Set(key, payload)
+	}
+}
+
+func forwardToLLM(ctx context.Context, client *http.Client, llmBody string) ([]byte, error) {
 	apiKey := os.Getenv("API_KEY")
 	endpoint := os.Getenv("ENDPOINT")
 
@@ -189,12 +185,11 @@ func forwardToLLM(
 	}
 
 	defer func() {
-		if closeErr := res.Body.Close(); closeErr != nil {
-			err = closeErr
-		}
+		_ = res.Body.Close()
 	}()
 
 	if res.StatusCode != http.StatusOK {
+		_, _ = io.Copy(io.Discard, res.Body)
 		return nil, fmt.Errorf("LLM returned HTTP %d", res.StatusCode)
 	}
 
@@ -203,8 +198,7 @@ func forwardToLLM(
 		return nil, fmt.Errorf("cannot read LLM response body: %w", readErr)
 	}
 
-	payload = llmPayload
-	return
+	return llmPayload, nil
 }
 
 func handleLLMError(w http.ResponseWriter, err error, fatalErrChan chan<- error) {

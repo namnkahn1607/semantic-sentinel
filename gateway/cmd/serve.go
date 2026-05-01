@@ -27,7 +27,7 @@ import (
 
 const (
 	socketAddress = "unix:///tmp/strix.sock"
-	endpoint      = "/v1/cache/check"
+	endpoint      = "/v1/cache/strix"
 	serverPort    = ":8080"
 	maxFD         = 65536
 
@@ -198,6 +198,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 		ReadHeaderTimeout: 3 * time.Second,
 		ReadTimeout:       5 * time.Second,
 		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 
 	// 9. Create OS Signal listener.
