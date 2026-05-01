@@ -187,8 +187,9 @@ func runServe(_ *cobra.Command, _ []string) error {
 	}
 
 	// 8. Register router (Server Mux).
+	fatalErrChan := make(chan error, 1)
 	mux := http.NewServeMux()
-	mux.HandleFunc(endpoint, internal.HandleCheckCache(clientStub, l1Cache))
+	mux.HandleFunc(endpoint, internal.HandleService(clientStub, l1Cache, fatalErrChan))
 
 	server := &http.Server{
 		Addr:    serverPort,
@@ -214,11 +215,16 @@ func runServe(_ *cobra.Command, _ []string) error {
 	}()
 
 	select {
-	case err := <-serverErrChan:
-		return fmt.Errorf("gateway crashed: %w", err)
-	case sig := <-sigChan:
-		log.Printf("[strix serve] Received signal %v. Initiating graceful shutdown...\n",
-			sig,
+	case serverErr := <-serverErrChan:
+		return fmt.Errorf("gateway crashed: %w", serverErr)
+	case fatalErr := <-fatalErrChan:
+		log.Printf(
+			"[strix serve] Fatal error from handler: %v - Initiating shutdown...\n",
+			fatalErr,
+		)
+	case sysSig := <-sigChan:
+		log.Printf("[strix serve] Received signal %v. Initiating shutdown...\n",
+			sysSig,
 		)
 	}
 
