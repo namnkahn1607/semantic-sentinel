@@ -6,8 +6,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-
-	"golang.org/x/sys/unix"
 )
 
 const (
@@ -20,12 +18,14 @@ func Enforce() error {
 		return ramErr
 	}
 
-	return pinProcToCPU(applyCPULimit())
+	applyCPULimit()
+	return nil
 }
 
-func applyCPULimit() (procCPUs int) {
+func applyCPULimit() {
 	sysCPUs := runtime.NumCPU()
 
+	var procCPUs int
 	if sysCPUs == 1 {
 		procCPUs = 1
 	} else {
@@ -33,24 +33,12 @@ func applyCPULimit() (procCPUs int) {
 	}
 
 	runtime.GOMAXPROCS(procCPUs)
-	return
-}
-
-func pinProcToCPU(procCPUs int) error {
-	var cpuSet unix.CPUSet
-	cpuSet.Zero()
-
-	for i := range procCPUs {
-		cpuSet.Set(i)
-	}
-
-	return unix.SchedSetaffinity(os.Getpid(), &cpuSet)
 }
 
 func checkRAM() error {
 	memData, readErr := os.ReadFile("/proc/meminfo")
 	if readErr != nil {
-		return nil
+		return fmt.Errorf("cannot read /proc/meminfo: %w", readErr)
 	}
 
 	for _, line := range strings.Split(string(memData), "\n") {
@@ -65,7 +53,7 @@ func checkRAM() error {
 
 		kb, parseErr := strconv.ParseInt(fields[1], 10, 64)
 		if parseErr != nil {
-			break
+			return fmt.Errorf("cannot parse RAM size: %w", parseErr)
 		}
 
 		if totalBytes := kb * 1024; totalBytes < minRAMBytes {
@@ -77,5 +65,5 @@ func checkRAM() error {
 		return nil
 	}
 
-	return nil
+	return fmt.Errorf("MemTotal not found in /proc/meminfo")
 }
