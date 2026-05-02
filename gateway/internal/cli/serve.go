@@ -66,7 +66,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 		return permErr
 	}
 
-	if ramErr := sys.CheckRAM(); ramErr != nil {
+	if ramErr := system.CheckRAM(); ramErr != nil {
 		return ramErr
 	}
 
@@ -75,9 +75,9 @@ func runServe(_ *cobra.Command, _ []string) error {
 	}
 
 	// 2. Calculate CPU affinity ratio for each process.
-	goCores := sys.ApplyGoLimits()
+	goCores := system.ApplyGoLimits()
 	log.Printf("[strix serve] GOMAXPROCS = %d\n", goCores)
-	cppCoresStr := sys.GenCppLimits(goCores)
+	cppCoresStr := system.GenCppLimits(goCores)
 
 	// 2. Resolve artifact paths.
 	paths, pathErr := resolvePaths()
