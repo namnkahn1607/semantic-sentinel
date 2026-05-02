@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"gateway/internal/middleware"
 	handler "gateway/internal/proxy"
 	pb "gateway/pb/proto"
 	"log"
@@ -11,11 +12,15 @@ import (
 	"time"
 
 	"github.com/VictoriaMetrics/fastcache"
+	"golang.org/x/time/rate"
 )
 
 const (
 	endpoint   = "/v1/cache/strix"
 	serverPort = ":8080"
+
+	allowedRate      = 1600
+	allowedBurstRate = 2000
 )
 
 type StrixServer struct {
@@ -26,7 +31,10 @@ func NewServer(
 	stub pb.SemanticServiceClient, cache *fastcache.Cache, fatalChan chan error,
 ) *StrixServer {
 	mux := http.NewServeMux()
-	mux.HandleFunc(endpoint, handler.HandleService(stub, cache, fatalChan))
+	limiter := rate.NewLimiter(rate.Limit(allowedRate), allowedBurstRate)
+
+	mainHandler := handler.HandleService(stub, cache, fatalChan)
+	mux.HandleFunc(endpoint, middleware.RateLimiter(limiter, mainHandler))
 
 	return &StrixServer{
 		sv: &http.Server{
