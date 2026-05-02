@@ -48,6 +48,15 @@ type CheckCacheAPIRequest struct {
 func HandleService(
 	stub pb.SemanticServiceClient, l0Cache *fastcache.Cache, fatalErrChan chan<- error,
 ) http.HandlerFunc {
+	apiKey := os.Getenv("API_KEY")
+	endpoint := os.Getenv("ENDPOINT")
+
+	if len(apiKey) == 0 || len(endpoint) == 0 {
+		go func() {
+			fatalErrChan <- errMisConfiguredCredential
+		}()
+	}
+
 	llmTransport := &http.Transport{
 		MaxIdleConns:        100,
 		MaxIdleConnsPerHost: 100,
@@ -88,7 +97,9 @@ func HandleService(
 
 		// 4. Prompts longer than 512 bytes are forward to LLM Provider.
 		if len(promptBytes) > maxPromptLen {
-			llmPayload, llmErr := forwardToLLM(r.Context(), llmClient, apiReq.LLMBody)
+			llmPayload, llmErr := forwardToLLM(
+				r.Context(), llmClient, endpoint, apiKey, apiReq.LLMBody,
+			)
 			if llmErr != nil {
 				handleLLMError(w, llmErr, fatalErrChan)
 				return
@@ -106,7 +117,9 @@ func HandleService(
 		grpcRes, rpcErr := stub.CheckCache(ctx, &pb.CheckCacheRequest{Prompt: apiReq.Prompt})
 		if rpcErr != nil {
 			log.Printf("[Handler] Read RPC error: %v\n", rpcErr)
-			llmPayload, llmErr := forwardToLLM(r.Context(), llmClient, apiReq.LLMBody)
+			llmPayload, llmErr := forwardToLLM(
+				r.Context(), llmClient, endpoint, apiKey, apiReq.LLMBody,
+			)
 			if llmErr != nil {
 				handleLLMError(w, llmErr, fatalErrChan)
 				return
@@ -123,7 +136,9 @@ func HandleService(
 			writePayload(w, []byte(grpcRes.GetCachedPayload()))
 
 		case pb.CacheState_CACHE_STATE_MISS:
-			llmPayload, llmErr := forwardToLLM(r.Context(), llmClient, apiReq.LLMBody)
+			llmPayload, llmErr := forwardToLLM(
+				r.Context(), llmClient, endpoint, apiKey, apiReq.LLMBody,
+			)
 			if llmErr != nil {
 				handleLLMError(w, llmErr, fatalErrChan)
 				return
@@ -144,7 +159,9 @@ func HandleService(
 				"Unexpected Check Cache state %v. Falling back to LLM",
 				grpcRes.GetCheckState(),
 			)
-			llmPayload, llmErr := forwardToLLM(r.Context(), llmClient, apiReq.LLMBody)
+			llmPayload, llmErr := forwardToLLM(
+				r.Context(), llmClient, endpoint, apiKey, apiReq.LLMBody,
+			)
 			if llmErr != nil {
 				handleLLMError(w, llmErr, fatalErrChan)
 				return
@@ -170,14 +187,9 @@ func trySetL0(cache *fastcache.Cache, key, payload []byte) {
 	}
 }
 
-func forwardToLLM(ctx context.Context, client *http.Client, llmBody string) ([]byte, error) {
-	apiKey := os.Getenv("API_KEY")
-	endpoint := os.Getenv("ENDPOINT")
-
-	if len(apiKey) == 0 || len(endpoint) == 0 {
-		return nil, errMisConfiguredCredential
-	}
-
+func forwardToLLM(
+	ctx context.Context, client *http.Client, endpoint, apiKey, llmBody string,
+) ([]byte, error) {
 	req, reqErr := http.NewRequestWithContext(
 		ctx, http.MethodPost, endpoint, bytes.NewBufferString(llmBody),
 	)
