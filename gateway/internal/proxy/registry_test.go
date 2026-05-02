@@ -88,3 +88,18 @@ func TestThunderingHerd_SingleLLMCall(t *testing.T) {
 		}
 	}
 }
+
+func TestHerdAwait_FinishedPioneer(t *testing.T) {
+	const nodeID = int32(99)
+
+	promise := pioneerRegister(nodeID)
+	pioneerFulfill(nodeID, promise, []byte("data"), nil)
+
+	payload, err, found := herdAwait(context.Background(), nodeID)
+	if found {
+		t.Errorf(
+			"expected found=false (Promise already removed), got true - payload=%q err=%v",
+			payload, err,
+		)
+	}
+}
