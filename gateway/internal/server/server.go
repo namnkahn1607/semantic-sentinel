@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"gateway/internal/middleware"
-	handler "gateway/internal/proxy"
+	"gateway/internal/proxy"
 	pb "gateway/pb/proto"
 	"log"
 	"net/http"
@@ -19,8 +19,8 @@ const (
 	endpoint   = "/v1/cache/strix"
 	serverPort = ":8080"
 
-	allowedRate      = 1600
-	allowedBurstRate = 2000
+	allowedRate      = 2000
+	allowedBurstRate = 2200
 )
 
 type StrixServer struct {
@@ -33,7 +33,7 @@ func NewServer(
 	mux := http.NewServeMux()
 	limiter := rate.NewLimiter(rate.Limit(allowedRate), allowedBurstRate)
 
-	mainHandler := handler.HandleService(stub, cache, fatalChan)
+	mainHandler := proxy.HandleService(stub, cache, fatalChan)
 	mux.HandleFunc(endpoint, middleware.RateLimiter(limiter, mainHandler))
 
 	return &StrixServer{
