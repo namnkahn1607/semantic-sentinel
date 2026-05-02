@@ -130,13 +130,42 @@ func HandleService(
 			return
 		}
 
-		// 6. Marshal and return the JSON response to client.
+		// 6. Investigate CheckCache state and act correspondingly.
 		switch grpcRes.GetCheckState() {
 		case pb.CacheState_CACHE_STATE_HIT:
 			writePayload(w, []byte(grpcRes.GetCachedPayload()))
 
 		case pb.CacheState_CACHE_STATE_MISS:
-			llmPayload, llmErr := forwardToLLM(
+			nodeID := grpcRes.GetNodeId()
+
+			var (
+				llmPayload []byte
+				llmErr     error
+			)
+
+			if nodeID == -1 {
+				llmPayload, llmErr = forwardToLLM(
+					r.Context(), llmClient, endpoint, apiKey, apiReq.LLMBody,
+				)
+				if llmErr != nil {
+					handleLLMError(w, llmErr, fatalErrChan)
+					return
+				}
+
+				writePayload(w, llmPayload)
+				trySetL0(l0Cache, hashKey, llmPayload)
+				return
+			}
+
+			promise := pioneerRegister(nodeID)
+
+			// Guarantee pioneerFulfill getting called exactly ONCE,
+			// hence avoiding leaked herd goroutines.
+			defer func() {
+				pioneerFulfill(nodeID, promise, llmPayload, llmErr)
+			}()
+
+			llmPayload, llmErr = forwardToLLM(
 				r.Context(), llmClient, endpoint, apiKey, apiReq.LLMBody,
 			)
 			if llmErr != nil {
@@ -146,19 +175,39 @@ func HandleService(
 
 			writePayload(w, llmPayload)
 			trySetL0(l0Cache, hashKey, llmPayload)
-
-			_ = grpcRes.GetNodeId()
-
-			// TODO: Implement Worker Pool doing SetCache()
+			// TODO: Push SetCache() job onto queue; Implement Worker Pool
 
 		case pb.CacheState_CACHE_STATE_PENDING:
-			// TODO: Implement Promise Registry
+			payload, err, found := herdAwait(r.Context(), grpcRes.GetNodeId())
+
+			if !found {
+				llmPayload, llmErr := forwardToLLM(
+					r.Context(), llmClient, endpoint, apiKey, apiReq.LLMBody,
+				)
+				if llmErr != nil {
+					handleLLMError(w, llmErr, fatalErrChan)
+					return
+				}
+
+				writePayload(w, llmPayload)
+				trySetL0(l0Cache, hashKey, llmPayload)
+				return
+			}
+
+			if err != nil {
+				handleLLMError(w, err, fatalErrChan)
+				return
+			}
+
+			writePayload(w, payload)
+			trySetL0(l0Cache, hashKey, payload)
 
 		default:
 			log.Printf(
 				"Unexpected Check Cache state %v. Falling back to LLM",
 				grpcRes.GetCheckState(),
 			)
+
 			llmPayload, llmErr := forwardToLLM(
 				r.Context(), llmClient, endpoint, apiKey, apiReq.LLMBody,
 			)
