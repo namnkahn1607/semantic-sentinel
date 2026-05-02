@@ -1,0 +1,65 @@
+package server
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	handler "gateway/internal/proxy"
+	pb "gateway/pb/proto"
+	"log"
+	"net/http"
+	"time"
+
+	"github.com/VictoriaMetrics/fastcache"
+)
+
+const (
+	endpoint   = "/v1/cache/strix"
+	serverPort = ":8080"
+)
+
+type StrixServer struct {
+	sv *http.Server
+}
+
+func NewServer(
+	stub pb.SemanticServiceClient, cache *fastcache.Cache, fatalChan chan error,
+) *StrixServer {
+	mux := http.NewServeMux()
+	mux.HandleFunc(endpoint, handler.HandleService(stub, cache, fatalChan))
+
+	return &StrixServer{
+		sv: &http.Server{
+			Addr:    serverPort,
+			Handler: mux,
+			// Mitigate Slowloris attack
+			ReadHeaderTimeout: 3 * time.Second,
+			ReadTimeout:       5 * time.Second,
+			WriteTimeout:      10 * time.Second,
+			IdleTimeout:       60 * time.Second,
+		},
+	}
+}
+
+func (server *StrixServer) Start() <-chan error {
+	serverErrChan := make(chan error, 1)
+
+	go func() {
+		log.Printf("[strix serve] HTTP Server listening on port: %s\n", serverPort)
+		if serverErr := server.sv.ListenAndServe(); serverErr != nil && !errors.Is(
+			serverErr, http.ErrServerClosed,
+		) {
+			serverErrChan <- serverErr
+		}
+	}()
+
+	return serverErrChan
+}
+
+func (server *StrixServer) Stop(ctx context.Context) error {
+	if shutdownErr := server.sv.Shutdown(ctx); shutdownErr != nil {
+		return fmt.Errorf("server shutdown failed: %w", shutdownErr)
+	}
+
+	return nil
+}

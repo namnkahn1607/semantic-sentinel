@@ -1,13 +1,12 @@
-package cmd
+package cli
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"gateway/internal"
+	"gateway/internal/server"
+	"gateway/internal/sys"
 	pb "gateway/pb/proto"
 	"log"
-	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -27,15 +26,13 @@ import (
 
 const (
 	socketAddress = "unix:///tmp/strix.sock"
-	endpoint      = "/v1/cache/strix"
-	serverPort    = ":8080"
-	maxFD         = 65536
+
+	maxFD       = 65536
+	l0CacheSize = 256 * 1024 * 1024
 
 	pollInterval    = 100 * time.Millisecond
 	pollTimeout     = 10 * time.Second
 	shutdownTimeout = 3 * time.Second
-
-	l1CacheSize = 256 * 1024 * 1024
 )
 
 var serveCmd = &cobra.Command{
@@ -69,7 +66,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 		return permErr
 	}
 
-	if ramErr := internal.CheckRAM(); ramErr != nil {
+	if ramErr := sys.CheckRAM(); ramErr != nil {
 		return ramErr
 	}
 
@@ -78,9 +75,9 @@ func runServe(_ *cobra.Command, _ []string) error {
 	}
 
 	// 2. Calculate CPU affinity ratio for each process.
-	goCores := internal.ApplyGoLimits()
+	goCores := sys.ApplyGoLimits()
 	log.Printf("[strix serve] GOMAXPROCS = %d\n", goCores)
-	cppCoresStr := internal.GenCppLimits(goCores)
+	cppCoresStr := sys.GenCppLimits(goCores)
 
 	// 2. Resolve artifact paths.
 	paths, pathErr := resolvePaths()
@@ -156,10 +153,10 @@ func runServe(_ *cobra.Command, _ []string) error {
 	// 5. Initialize L1 Exact-match Cache.
 	log.Printf(
 		"[strix serve] Allocating %dMB off-heap memory for L1 Fast Cache...\n",
-		l1CacheSize/(1024*1024),
+		l0CacheSize/(1024*1024),
 	)
-	l1Cache := fastcache.New(l1CacheSize)
-	defer l1Cache.Reset()
+	l0Cache := fastcache.New(l0CacheSize)
+	defer l0Cache.Reset()
 
 	// 6.1. Open a single gRPC connection to Vector Engine
 	conn, connErr := grpc.NewClient(
@@ -186,34 +183,15 @@ func runServe(_ *cobra.Command, _ []string) error {
 		return pollErr
 	}
 
-	// 8. Register router (Server Mux).
+	// 8. Initialize HTTP Server.
 	fatalErrChan := make(chan error, 1)
-	mux := http.NewServeMux()
-	mux.HandleFunc(endpoint, internal.HandleService(clientStub, l1Cache, fatalErrChan))
-
-	server := &http.Server{
-		Addr:    serverPort,
-		Handler: mux,
-		// Mitigate Slowloris attack
-		ReadHeaderTimeout: 3 * time.Second,
-		ReadTimeout:       5 * time.Second,
-		WriteTimeout:      10 * time.Second,
-		IdleTimeout:       60 * time.Second,
-	}
+	sv := server.NewServer(clientStub, l0Cache, fatalErrChan)
 
 	// 9. Create OS Signal listener.
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
-	serverErrChan := make(chan error, 1)
-	go func() {
-		log.Printf("[strix serve] HTTP Server listening on port: %s\n", serverPort)
-		if serverErr := server.ListenAndServe(); serverErr != nil && !errors.Is(
-			serverErr, http.ErrServerClosed,
-		) {
-			serverErrChan <- serverErr
-		}
-	}()
+	serverErrChan := sv.Start()
 
 	select {
 	case serverErr := <-serverErrChan:
@@ -233,12 +211,8 @@ func runServe(_ *cobra.Command, _ []string) error {
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer shutdownCancel()
 
-	if shutdownErr := server.Shutdown(shutdownCtx); shutdownErr != nil {
-		return fmt.Errorf("server shutdown failed: %w", shutdownErr)
-	}
-
-	log.Println("[strix serve] HTTP Server stopped")
-	return nil
+	log.Println("[strix serve] Stopping HTTP Server...")
+	return sv.Stop(shutdownCtx)
 }
 
 func openMoreFD() error {
