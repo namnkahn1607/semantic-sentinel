@@ -178,7 +178,13 @@ func HandleService(
 			// TODO: Push SetCache() job onto queue; Implement Worker Pool
 
 		case pb.CacheState_CACHE_STATE_PENDING:
-			payload, err, found := herdAwait(r.Context(), grpcRes.GetNodeId())
+			payload, pioneerErr, selfCancelled, found := herdAwait(
+				r.Context(), grpcRes.GetNodeId(),
+			)
+
+			if selfCancelled {
+				return
+			}
 
 			if !found {
 				llmPayload, llmErr := forwardToLLM(
@@ -194,13 +200,17 @@ func HandleService(
 				return
 			}
 
-			if err != nil {
-				if errors.Is(err, context.Canceled) ||
-					errors.Is(err, context.DeadlineExceeded) {
+			if pioneerErr != nil {
+				llmPayload, llmErr := forwardToLLM(
+					r.Context(), llmClient, endpoint, apiKey, apiReq.LLMBody,
+				)
+				if llmErr != nil {
+					handleLLMError(w, llmErr, fatalErrChan)
 					return
 				}
 
-				handleLLMError(w, err, fatalErrChan)
+				writePayload(w, llmPayload)
+				trySetL0(l0Cache, hashKey, llmPayload)
 				return
 			}
 

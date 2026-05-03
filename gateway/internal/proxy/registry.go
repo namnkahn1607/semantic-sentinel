@@ -68,7 +68,9 @@ func pioneerFulfill(nodeID int32, p *Promise, payload []byte, err error) {
 // corresponding Node ID, then blocks until:
 // a. The pioneer fulfills the Promise.
 // b. Its context is canceled (client disconnect/timeout).
-func herdAwait(ctx context.Context, nodeID int32) (payload []byte, err error, found bool) {
+func herdAwait(
+	ctx context.Context, nodeID int32,
+) (payload []byte, pioneerErr error, selfCancelled bool, found bool) {
 	shard := getShard(nodeID)
 	shard.mu.RLock()
 	p := shard.registry[nodeID]
@@ -77,15 +79,15 @@ func herdAwait(ctx context.Context, nodeID int32) (payload []byte, err error, fo
 	if p == nil {
 		// Promise not in registry, pioneer closed it duty.
 		// Fall back to direct LLM call immediately
-		return nil, nil, false
+		return nil, nil, false, false
 	}
 
 	select {
 	case <-p.ready:
 		// Successfully fulfilled, use payload
-		return p.Payload, p.Err, true
+		return p.Payload, p.Err, false, true
 	case <-ctx.Done():
-		// Client disconnect or timer runs out
-		return nil, ctx.Err(), true
+		// Herd's client disconnect or timer runs out
+		return nil, ctx.Err(), true, true
 	}
 }
