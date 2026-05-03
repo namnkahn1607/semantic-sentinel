@@ -12,4 +12,4 @@
 buf.yaml
 buf.gen.yaml
 requirements.txt
-scripts/
+scripts/*.py
