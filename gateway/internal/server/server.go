@@ -28,12 +28,13 @@ type StrixServer struct {
 }
 
 func NewServer(
-	stub pb.SemanticServiceClient, cache *fastcache.Cache, fatalChan chan error,
+	stub pb.SemanticServiceClient, cache *fastcache.Cache,
+	fatalChan chan error, pool *proxy.WorkerPool,
 ) *StrixServer {
 	mux := http.NewServeMux()
 	limiter := rate.NewLimiter(rate.Limit(allowedRate), allowedBurstRate)
 
-	mainHandler := proxy.HandleService(stub, cache, fatalChan)
+	mainHandler := proxy.HandleService(stub, cache, fatalChan, pool)
 	mux.HandleFunc(endpoint, middleware.RateLimiter(limiter, mainHandler))
 
 	return &StrixServer{

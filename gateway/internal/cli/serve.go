@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"gateway/internal/proxy"
 	"gateway/internal/server"
 	"gateway/internal/sys"
 	pb "gateway/pb/proto"
@@ -185,7 +186,9 @@ func runServe(_ *cobra.Command, _ []string) error {
 
 	// 8. Initialize HTTP Server.
 	fatalErrChan := make(chan error, 1)
-	sv := server.NewServer(clientStub, l0Cache, fatalErrChan)
+	pool := proxy.NewWorkerPool(clientStub)
+	defer pool.Stop()
+	sv := server.NewServer(clientStub, l0Cache, fatalErrChan, pool)
 
 	// 9. Create OS Signal listener.
 	sigChan := make(chan os.Signal, 1)

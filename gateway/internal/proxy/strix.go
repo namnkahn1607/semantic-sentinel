@@ -46,7 +46,8 @@ type CheckCacheAPIRequest struct {
 //  4. Falls through to the LLM provider for long prompts (> 512 bytes).
 //  5. Falls through to the Vector Engine for short prompts.
 func HandleService(
-	stub pb.SemanticServiceClient, l0Cache *fastcache.Cache, fatalErrChan chan<- error,
+	stub pb.SemanticServiceClient, l0Cache *fastcache.Cache,
+	fatalErrChan chan<- error, pool *WorkerPool,
 ) http.HandlerFunc {
 	apiKey := os.Getenv("API_KEY")
 	endpoint := os.Getenv("ENDPOINT")
@@ -130,13 +131,13 @@ func HandleService(
 		}
 
 		// 6. Investigate CheckCache state and act correspondingly.
+		nodeID := grpcRes.GetNodeId()
+
 		switch grpcRes.GetCheckState() {
 		case pb.CacheState_CACHE_STATE_HIT:
 			writePayload(w, grpcRes.GetCachedPayload())
 
 		case pb.CacheState_CACHE_STATE_MISS:
-			nodeID := grpcRes.GetNodeId()
-
 			var (
 				llmPayload []byte
 				llmErr     error
@@ -174,7 +175,7 @@ func HandleService(
 
 			writePayload(w, llmPayload)
 			trySetL0(l0Cache, hashKey, llmPayload)
-			// TODO: Push SetCache() job onto queue; Implement Worker Pool
+			pool.TryEnqueue(nodeID, llmPayload)
 
 		case pb.CacheState_CACHE_STATE_PENDING:
 			payload, pioneerErr, selfCancelled, found := herdAwait(
@@ -196,6 +197,7 @@ func HandleService(
 
 				writePayload(w, llmPayload)
 				trySetL0(l0Cache, hashKey, llmPayload)
+				pool.TryEnqueue(nodeID, llmPayload)
 				return
 			}
 
@@ -210,6 +212,7 @@ func HandleService(
 
 				writePayload(w, llmPayload)
 				trySetL0(l0Cache, hashKey, llmPayload)
+				pool.TryEnqueue(nodeID, llmPayload)
 				return
 			}
 
