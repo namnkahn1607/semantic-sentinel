@@ -195,6 +195,11 @@ func HandleService(
 			}
 
 			if err != nil {
+				if errors.Is(err, context.Canceled) ||
+					errors.Is(err, context.DeadlineExceeded) {
+					return
+				}
+
 				handleLLMError(w, err, fatalErrChan)
 				return
 			}
