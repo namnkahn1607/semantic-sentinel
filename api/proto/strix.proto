@@ -12,18 +12,18 @@ enum CacheState {
 }
 
 message CheckCacheRequest {
-  string prompt = 1;
+  bytes prompt = 1;
 }
 
 message CheckCacheResponse {
   CacheState check_state = 1;
   int32 node_id = 2; // -1 if HIT, otherwise > -1
-  string cached_payload = 3; // empty if MISS or PENDING_HIT
+  bytes cached_payload = 3; // empty if MISS or PENDING_HIT
 }
 
 message SetCacheRequest {
   int32 node_id = 1;
-  string uncached_payload = 2;
+  bytes uncached_payload = 2;
 }
 
 message SetCacheResponse {

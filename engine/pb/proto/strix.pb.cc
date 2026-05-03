@@ -186,11 +186,11 @@ static const ::_pb::Message* PROTOBUF_NONNULL const file_default_instances[] = {
 const char descriptor_table_protodef_strix_2eproto[] ABSL_ATTRIBUTE_SECTION_VARIABLE(
     protodesc_cold) = {
     "\n\013strix.proto\022\005proto\"#\n\021CheckCacheReques"
-    "t\022\016\n\006prompt\030\001 \001(\t\"e\n\022CheckCacheResponse\022"
+    "t\022\016\n\006prompt\030\001 \001(\014\"e\n\022CheckCacheResponse\022"
     "&\n\013check_state\030\001 \001(\0162\021.proto.CacheState\022"
-    "\017\n\007node_id\030\002 \001(\005\022\026\n\016cached_payload\030\003 \001(\t"
+    "\017\n\007node_id\030\002 \001(\005\022\026\n\016cached_payload\030\003 \001(\014"
     "\"<\n\017SetCacheRequest\022\017\n\007node_id\030\001 \001(\005\022\030\n\020"
-    "uncached_payload\030\002 \001(\t\"#\n\020SetCacheRespon"
+    "uncached_payload\030\002 \001(\014\"#\n\020SetCacheRespon"
     "se\022\017\n\007success\030\001 \001(\010*m\n\nCacheState\022\033\n\027CAC"
     "HE_STATE_UNSPECIFIED\020\000\022\023\n\017CACHE_STATE_HI"
     "T\020\001\022\024\n\020CACHE_STATE_MISS\020\002\022\027\n\023CACHE_STATE"
@@ -334,7 +334,7 @@ CheckCacheRequest::GetClassData() const {
   return CheckCacheRequest_class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<0, 1, 0, 38, 2>
+const ::_pbi::TcParseTable<0, 1, 0, 0, 2>
 CheckCacheRequest::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(CheckCacheRequest, _impl_._has_bits_),
@@ -353,21 +353,18 @@ CheckCacheRequest::_table_ = {
     ::_pbi::TcParser::GetTable<::proto::CheckCacheRequest>(),  // to_prefetch
     #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
   }, {{
-    // string prompt = 1;
-    {::_pbi::TcParser::FastUS1,
+    // bytes prompt = 1;
+    {::_pbi::TcParser::FastBS1,
      {10, 0, 0,
       PROTOBUF_FIELD_OFFSET(CheckCacheRequest, _impl_.prompt_)}},
   }}, {{
     65535, 65535
   }}, {{
-    // string prompt = 1;
-    {PROTOBUF_FIELD_OFFSET(CheckCacheRequest, _impl_.prompt_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
+    // bytes prompt = 1;
+    {PROTOBUF_FIELD_OFFSET(CheckCacheRequest, _impl_.prompt_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcOptional | ::_fl::kBytes | ::_fl::kRepAString)},
   }},
   // no aux_entries
   {{
-    "\27\6\0\0\0\0\0\0"
-    "proto.CheckCacheRequest"
-    "prompt"
   }},
 };
 PROTOBUF_NOINLINE void CheckCacheRequest::Clear() {
@@ -404,13 +401,11 @@ PROTOBUF_NOINLINE void CheckCacheRequest::Clear() {
   (void)cached_has_bits;
 
   cached_has_bits = this_._impl_._has_bits_[0];
-  // string prompt = 1;
+  // bytes prompt = 1;
   if (CheckHasBit(cached_has_bits, 0x00000001U)) {
     if (!this_._internal_prompt().empty()) {
       const ::std::string& _s = this_._internal_prompt();
-      ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
-          _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "proto.CheckCacheRequest.prompt");
-      target = stream->WriteStringMaybeAliased(1, _s, target);
+      target = stream->WriteBytesMaybeAliased(1, _s, target);
     }
   }
 
@@ -438,11 +433,11 @@ PROTOBUF_NOINLINE void CheckCacheRequest::Clear() {
   (void)cached_has_bits;
 
    {
-    // string prompt = 1;
+    // bytes prompt = 1;
     cached_has_bits = this_._impl_._has_bits_[0];
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
       if (!this_._internal_prompt().empty()) {
-        total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
+        total_size += 1 + ::google::protobuf::internal::WireFormatLite::BytesSize(
                                         this_._internal_prompt());
       }
     }
@@ -622,7 +617,7 @@ CheckCacheResponse::GetClassData() const {
   return CheckCacheResponse_class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<2, 3, 0, 47, 2>
+const ::_pbi::TcParseTable<2, 3, 0, 0, 2>
 CheckCacheResponse::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(CheckCacheResponse, _impl_._has_bits_),
@@ -650,8 +645,8 @@ CheckCacheResponse::_table_ = {
     {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(CheckCacheResponse, _impl_.node_id_), 2>(),
      {16, 2, 0,
       PROTOBUF_FIELD_OFFSET(CheckCacheResponse, _impl_.node_id_)}},
-    // string cached_payload = 3;
-    {::_pbi::TcParser::FastUS1,
+    // bytes cached_payload = 3;
+    {::_pbi::TcParser::FastBS1,
      {26, 0, 0,
       PROTOBUF_FIELD_OFFSET(CheckCacheResponse, _impl_.cached_payload_)}},
   }}, {{
@@ -661,14 +656,11 @@ CheckCacheResponse::_table_ = {
     {PROTOBUF_FIELD_OFFSET(CheckCacheResponse, _impl_.check_state_), _Internal::kHasBitsOffset + 1, 0, (0 | ::_fl::kFcOptional | ::_fl::kOpenEnum)},
     // int32 node_id = 2;
     {PROTOBUF_FIELD_OFFSET(CheckCacheResponse, _impl_.node_id_), _Internal::kHasBitsOffset + 2, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
-    // string cached_payload = 3;
-    {PROTOBUF_FIELD_OFFSET(CheckCacheResponse, _impl_.cached_payload_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
+    // bytes cached_payload = 3;
+    {PROTOBUF_FIELD_OFFSET(CheckCacheResponse, _impl_.cached_payload_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcOptional | ::_fl::kBytes | ::_fl::kRepAString)},
   }},
   // no aux_entries
   {{
-    "\30\0\0\16\0\0\0\0"
-    "proto.CheckCacheResponse"
-    "cached_payload"
   }},
 };
 PROTOBUF_NOINLINE void CheckCacheResponse::Clear() {
@@ -728,13 +720,11 @@ PROTOBUF_NOINLINE void CheckCacheResponse::Clear() {
     }
   }
 
-  // string cached_payload = 3;
+  // bytes cached_payload = 3;
   if (CheckHasBit(cached_has_bits, 0x00000001U)) {
     if (!this_._internal_cached_payload().empty()) {
       const ::std::string& _s = this_._internal_cached_payload();
-      ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
-          _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "proto.CheckCacheResponse.cached_payload");
-      target = stream->WriteStringMaybeAliased(3, _s, target);
+      target = stream->WriteBytesMaybeAliased(3, _s, target);
     }
   }
 
@@ -764,10 +754,10 @@ PROTOBUF_NOINLINE void CheckCacheResponse::Clear() {
   ::_pbi::Prefetch5LinesFrom7Lines(&this_);
   cached_has_bits = this_._impl_._has_bits_[0];
   if (BatchCheckHasBit(cached_has_bits, 0x00000007U)) {
-    // string cached_payload = 3;
+    // bytes cached_payload = 3;
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
       if (!this_._internal_cached_payload().empty()) {
-        total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
+        total_size += 1 + ::google::protobuf::internal::WireFormatLite::BytesSize(
                                         this_._internal_cached_payload());
       }
     }
@@ -968,7 +958,7 @@ SetCacheRequest::GetClassData() const {
   return SetCacheRequest_class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<1, 2, 0, 46, 2>
+const ::_pbi::TcParseTable<1, 2, 0, 0, 2>
 SetCacheRequest::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(SetCacheRequest, _impl_._has_bits_),
@@ -987,8 +977,8 @@ SetCacheRequest::_table_ = {
     ::_pbi::TcParser::GetTable<::proto::SetCacheRequest>(),  // to_prefetch
     #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
   }, {{
-    // string uncached_payload = 2;
-    {::_pbi::TcParser::FastUS1,
+    // bytes uncached_payload = 2;
+    {::_pbi::TcParser::FastBS1,
      {18, 0, 0,
       PROTOBUF_FIELD_OFFSET(SetCacheRequest, _impl_.uncached_payload_)}},
     // int32 node_id = 1;
@@ -1000,14 +990,11 @@ SetCacheRequest::_table_ = {
   }}, {{
     // int32 node_id = 1;
     {PROTOBUF_FIELD_OFFSET(SetCacheRequest, _impl_.node_id_), _Internal::kHasBitsOffset + 1, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
-    // string uncached_payload = 2;
-    {PROTOBUF_FIELD_OFFSET(SetCacheRequest, _impl_.uncached_payload_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
+    // bytes uncached_payload = 2;
+    {PROTOBUF_FIELD_OFFSET(SetCacheRequest, _impl_.uncached_payload_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcOptional | ::_fl::kBytes | ::_fl::kRepAString)},
   }},
   // no aux_entries
   {{
-    "\25\0\20\0\0\0\0\0"
-    "proto.SetCacheRequest"
-    "uncached_payload"
   }},
 };
 PROTOBUF_NOINLINE void SetCacheRequest::Clear() {
@@ -1054,13 +1041,11 @@ PROTOBUF_NOINLINE void SetCacheRequest::Clear() {
     }
   }
 
-  // string uncached_payload = 2;
+  // bytes uncached_payload = 2;
   if (CheckHasBit(cached_has_bits, 0x00000001U)) {
     if (!this_._internal_uncached_payload().empty()) {
       const ::std::string& _s = this_._internal_uncached_payload();
-      ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
-          _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "proto.SetCacheRequest.uncached_payload");
-      target = stream->WriteStringMaybeAliased(2, _s, target);
+      target = stream->WriteBytesMaybeAliased(2, _s, target);
     }
   }
 
@@ -1090,10 +1075,10 @@ PROTOBUF_NOINLINE void SetCacheRequest::Clear() {
   ::_pbi::Prefetch5LinesFrom7Lines(&this_);
   cached_has_bits = this_._impl_._has_bits_[0];
   if (BatchCheckHasBit(cached_has_bits, 0x00000003U)) {
-    // string uncached_payload = 2;
+    // bytes uncached_payload = 2;
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
       if (!this_._internal_uncached_payload().empty()) {
-        total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
+        total_size += 1 + ::google::protobuf::internal::WireFormatLite::BytesSize(
                                         this_._internal_uncached_payload());
       }
     }

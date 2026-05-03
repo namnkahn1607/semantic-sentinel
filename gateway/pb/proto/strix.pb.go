@@ -75,7 +75,7 @@ func (CacheState) EnumDescriptor() ([]byte, []int) {
 
 type CheckCacheRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Prompt        string                 `protobuf:"bytes,1,opt,name=prompt,proto3" json:"prompt,omitempty"`
+	Prompt        []byte                 `protobuf:"bytes,1,opt,name=prompt,proto3" json:"prompt,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -110,18 +110,18 @@ func (*CheckCacheRequest) Descriptor() ([]byte, []int) {
 	return file_proto_strix_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *CheckCacheRequest) GetPrompt() string {
+func (x *CheckCacheRequest) GetPrompt() []byte {
 	if x != nil {
 		return x.Prompt
 	}
-	return ""
+	return nil
 }
 
 type CheckCacheResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	CheckState    CacheState             `protobuf:"varint,1,opt,name=check_state,json=checkState,proto3,enum=proto.CacheState" json:"check_state,omitempty"`
 	NodeId        int32                  `protobuf:"varint,2,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`                     // -1 if HIT, otherwise > -1
-	CachedPayload string                 `protobuf:"bytes,3,opt,name=cached_payload,json=cachedPayload,proto3" json:"cached_payload,omitempty"` // empty if MISS or PENDING_HIT
+	CachedPayload []byte                 `protobuf:"bytes,3,opt,name=cached_payload,json=cachedPayload,proto3" json:"cached_payload,omitempty"` // empty if MISS or PENDING_HIT
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -170,17 +170,17 @@ func (x *CheckCacheResponse) GetNodeId() int32 {
 	return 0
 }
 
-func (x *CheckCacheResponse) GetCachedPayload() string {
+func (x *CheckCacheResponse) GetCachedPayload() []byte {
 	if x != nil {
 		return x.CachedPayload
 	}
-	return ""
+	return nil
 }
 
 type SetCacheRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	NodeId          int32                  `protobuf:"varint,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
-	UncachedPayload string                 `protobuf:"bytes,2,opt,name=uncached_payload,json=uncachedPayload,proto3" json:"uncached_payload,omitempty"`
+	UncachedPayload []byte                 `protobuf:"bytes,2,opt,name=uncached_payload,json=uncachedPayload,proto3" json:"uncached_payload,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -222,11 +222,11 @@ func (x *SetCacheRequest) GetNodeId() int32 {
 	return 0
 }
 
-func (x *SetCacheRequest) GetUncachedPayload() string {
+func (x *SetCacheRequest) GetUncachedPayload() []byte {
 	if x != nil {
 		return x.UncachedPayload
 	}
-	return ""
+	return nil
 }
 
 type SetCacheResponse struct {
@@ -279,15 +279,15 @@ const file_proto_strix_proto_rawDesc = "" +
 	"\n" +
 	"\x11proto/strix.proto\x12\x05proto\"+\n" +
 	"\x11CheckCacheRequest\x12\x16\n" +
-	"\x06prompt\x18\x01 \x01(\tR\x06prompt\"\x88\x01\n" +
+	"\x06prompt\x18\x01 \x01(\fR\x06prompt\"\x88\x01\n" +
 	"\x12CheckCacheResponse\x122\n" +
 	"\vcheck_state\x18\x01 \x01(\x0e2\x11.proto.CacheStateR\n" +
 	"checkState\x12\x17\n" +
 	"\anode_id\x18\x02 \x01(\x05R\x06nodeId\x12%\n" +
-	"\x0ecached_payload\x18\x03 \x01(\tR\rcachedPayload\"U\n" +
+	"\x0ecached_payload\x18\x03 \x01(\fR\rcachedPayload\"U\n" +
 	"\x0fSetCacheRequest\x12\x17\n" +
 	"\anode_id\x18\x01 \x01(\x05R\x06nodeId\x12)\n" +
-	"\x10uncached_payload\x18\x02 \x01(\tR\x0funcachedPayload\",\n" +
+	"\x10uncached_payload\x18\x02 \x01(\fR\x0funcachedPayload\",\n" +
 	"\x10SetCacheResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess*m\n" +
 	"\n" +

@@ -461,7 +461,7 @@ class SetCacheRequest final : public ::google::protobuf::Message
     kUncachedPayloadFieldNumber = 2,
     kNodeIdFieldNumber = 1,
   };
-  // string uncached_payload = 2;
+  // bytes uncached_payload = 2;
   void clear_uncached_payload() ;
   const ::std::string& uncached_payload() const;
   template <typename Arg_ = const ::std::string&, typename... Args_>
@@ -491,7 +491,7 @@ class SetCacheRequest final : public ::google::protobuf::Message
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<1, 2,
-                                   0, 46,
+                                   0, 0,
                                    2>
       _table_;
 
@@ -669,7 +669,7 @@ class CheckCacheResponse final : public ::google::protobuf::Message
     kCheckStateFieldNumber = 1,
     kNodeIdFieldNumber = 2,
   };
-  // string cached_payload = 3;
+  // bytes cached_payload = 3;
   void clear_cached_payload() ;
   const ::std::string& cached_payload() const;
   template <typename Arg_ = const ::std::string&, typename... Args_>
@@ -709,7 +709,7 @@ class CheckCacheResponse final : public ::google::protobuf::Message
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<2, 3,
-                                   0, 47,
+                                   0, 0,
                                    2>
       _table_;
 
@@ -886,7 +886,7 @@ class CheckCacheRequest final : public ::google::protobuf::Message
   enum : int {
     kPromptFieldNumber = 1,
   };
-  // string prompt = 1;
+  // bytes prompt = 1;
   void clear_prompt() ;
   const ::std::string& prompt() const;
   template <typename Arg_ = const ::std::string&, typename... Args_>
@@ -906,7 +906,7 @@ class CheckCacheRequest final : public ::google::protobuf::Message
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<0, 1,
-                                   0, 38,
+                                   0, 0,
                                    2>
       _table_;
 
@@ -952,7 +952,7 @@ extern const ::google::protobuf::internal::ClassDataFull CheckCacheRequest_class
 
 // CheckCacheRequest
 
-// string prompt = 1;
+// bytes prompt = 1;
 inline void CheckCacheRequest::clear_prompt() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.prompt_.ClearToEmpty();
@@ -968,7 +968,7 @@ template <typename Arg_, typename... Args_>
 PROTOBUF_ALWAYS_INLINE void CheckCacheRequest::set_prompt(Arg_&& arg, Args_... args) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   SetHasBit(_impl_._has_bits_[0], 0x00000001U);
-  _impl_.prompt_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  _impl_.prompt_.SetBytes(static_cast<Arg_&&>(arg), args..., GetArena());
   // @@protoc_insertion_point(field_set:proto.CheckCacheRequest.prompt)
 }
 inline ::std::string* PROTOBUF_NONNULL CheckCacheRequest::mutable_prompt()
@@ -1071,7 +1071,7 @@ inline void CheckCacheResponse::_internal_set_node_id(::int32_t value) {
   _impl_.node_id_ = value;
 }
 
-// string cached_payload = 3;
+// bytes cached_payload = 3;
 inline void CheckCacheResponse::clear_cached_payload() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.cached_payload_.ClearToEmpty();
@@ -1087,7 +1087,7 @@ template <typename Arg_, typename... Args_>
 PROTOBUF_ALWAYS_INLINE void CheckCacheResponse::set_cached_payload(Arg_&& arg, Args_... args) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   SetHasBit(_impl_._has_bits_[0], 0x00000001U);
-  _impl_.cached_payload_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  _impl_.cached_payload_.SetBytes(static_cast<Arg_&&>(arg), args..., GetArena());
   // @@protoc_insertion_point(field_set:proto.CheckCacheResponse.cached_payload)
 }
 inline ::std::string* PROTOBUF_NONNULL CheckCacheResponse::mutable_cached_payload()
@@ -1165,7 +1165,7 @@ inline void SetCacheRequest::_internal_set_node_id(::int32_t value) {
   _impl_.node_id_ = value;
 }
 
-// string uncached_payload = 2;
+// bytes uncached_payload = 2;
 inline void SetCacheRequest::clear_uncached_payload() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.uncached_payload_.ClearToEmpty();
@@ -1181,7 +1181,7 @@ template <typename Arg_, typename... Args_>
 PROTOBUF_ALWAYS_INLINE void SetCacheRequest::set_uncached_payload(Arg_&& arg, Args_... args) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   SetHasBit(_impl_._has_bits_[0], 0x00000001U);
-  _impl_.uncached_payload_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  _impl_.uncached_payload_.SetBytes(static_cast<Arg_&&>(arg), args..., GetArena());
   // @@protoc_insertion_point(field_set:proto.SetCacheRequest.uncached_payload)
 }
 inline ::std::string* PROTOBUF_NONNULL SetCacheRequest::mutable_uncached_payload()
