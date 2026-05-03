@@ -35,8 +35,8 @@ var (
 )
 
 type CheckCacheAPIRequest struct {
-	Prompt  string `json:"prompt"`
-	LLMBody string `json:"llm_body"`
+	Prompt  []byte `json:"prompt"`
+	LLMBody []byte `json:"llm_body"`
 }
 
 // HandleService returns an http.HandlerFunc that:
@@ -85,8 +85,7 @@ func HandleService(
 		}
 
 		// 3.1. Computes SHA-256 hash of the prompt
-		promptBytes := []byte(apiReq.Prompt)
-		hash := sha256.Sum256(promptBytes)
+		hash := sha256.Sum256(apiReq.Prompt)
 		hashKey := hash[:]
 
 		// 3.2. Check on L0 Fast Cache using hashcode. If hit, return immediately.
@@ -96,7 +95,7 @@ func HandleService(
 		}
 
 		// 4. Prompts longer than 512 bytes are forward to LLM Provider.
-		if len(promptBytes) > maxPromptLen {
+		if len(apiReq.Prompt) > maxPromptLen {
 			llmPayload, llmErr := forwardToLLM(
 				r.Context(), llmClient, endpoint, apiKey, apiReq.LLMBody,
 			)
@@ -133,7 +132,7 @@ func HandleService(
 		// 6. Investigate CheckCache state and act correspondingly.
 		switch grpcRes.GetCheckState() {
 		case pb.CacheState_CACHE_STATE_HIT:
-			writePayload(w, []byte(grpcRes.GetCachedPayload()))
+			writePayload(w, grpcRes.GetCachedPayload())
 
 		case pb.CacheState_CACHE_STATE_MISS:
 			nodeID := grpcRes.GetNodeId()
@@ -252,10 +251,10 @@ func trySetL0(cache *fastcache.Cache, key, payload []byte) {
 }
 
 func forwardToLLM(
-	ctx context.Context, client *http.Client, endpoint, apiKey, llmBody string,
+	ctx context.Context, client *http.Client, endpoint, apiKey string, llmBody []byte,
 ) ([]byte, error) {
 	req, reqErr := http.NewRequestWithContext(
-		ctx, http.MethodPost, endpoint, bytes.NewBufferString(llmBody),
+		ctx, http.MethodPost, endpoint, bytes.NewReader(llmBody),
 	)
 	if reqErr != nil {
 		return nil, fmt.Errorf("cannot build request to LLM: %w", reqErr)

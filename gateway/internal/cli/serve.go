@@ -289,7 +289,7 @@ func waitForEngine(ctx context.Context, stub pb.SemanticServiceClient) error {
 
 	for attempt := 1; time.Now().Before(deadline); attempt++ {
 		pingCtx, pingCancel := context.WithTimeout(ctx, pollInterval)
-		_, pingErr := stub.CheckCache(pingCtx, &pb.CheckCacheRequest{Prompt: "health_check"})
+		_, pingErr := stub.CheckCache(pingCtx, &pb.CheckCacheRequest{Prompt: []byte("health_check")})
 		pingCancel()
 
 		if pingErr == nil {
