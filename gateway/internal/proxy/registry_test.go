@@ -31,7 +31,7 @@ func TestThunderingHerd_SingleLLMCall(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			payload, err, found := herdAwait(context.Background(), nodeID)
+			payload, err, _, found := herdAwait(context.Background(), nodeID)
 
 			if !found {
 				t.Errorf("herd goroutine: promise not found — registry invariant violated")
@@ -95,7 +95,7 @@ func TestHerdAwait_FinishedPioneer(t *testing.T) {
 	promise := pioneerRegister(nodeID)
 	pioneerFulfill(nodeID, promise, []byte("data"), nil)
 
-	payload, err, found := herdAwait(context.Background(), nodeID)
+	payload, err, _, found := herdAwait(context.Background(), nodeID)
 	if found {
 		t.Errorf(
 			"expected found=false (Promise already removed), got true - payload=%q err=%v",
@@ -113,7 +113,7 @@ func TestHerdAwait_ContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	_, err, found := herdAwait(ctx, nodeID)
+	_, err, _, found := herdAwait(ctx, nodeID)
 
 	if !found {
 		t.Error("expected found=true (Promise exists in registry), got false")
@@ -141,7 +141,7 @@ func TestLockStriping_SameShardDifferentKeys(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		payload, err, found := herdAwait(context.Background(), nodeA)
+		payload, err, _, found := herdAwait(context.Background(), nodeA)
 		if !found || err != nil || string(payload) != "payload-A" {
 			t.Errorf("nodeA: got payload=%q found=%v err=%v", payload, found, err)
 		}
@@ -150,7 +150,7 @@ func TestLockStriping_SameShardDifferentKeys(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		payload, err, found := herdAwait(context.Background(), nodeB)
+		payload, err, _, found := herdAwait(context.Background(), nodeB)
 		if !found || err != nil || string(payload) != "payload-B" {
 			t.Errorf("nodeB: got payload=%q found=%v err=%v", payload, found, err)
 		}
