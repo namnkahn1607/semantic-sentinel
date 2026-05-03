@@ -103,3 +103,63 @@ func TestHerdAwait_FinishedPioneer(t *testing.T) {
 		)
 	}
 }
+
+func TestHerdAwait_ContextCancellation(t *testing.T) {
+	const nodeID = int32(55)
+
+	promise := pioneerRegister(nodeID)
+	defer pioneerFulfill(nodeID, promise, nil, nil)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err, found := herdAwait(ctx, nodeID)
+
+	if !found {
+		t.Error("expected found=true (Promise exists in registry), got false")
+	}
+
+	if err == nil {
+		t.Error(
+			"expected ctx.Err() to propagate as err, got nil - " +
+				"goroutines might not respect context cancellation",
+		)
+	}
+}
+
+func TestLockStriping_SameShardDifferentKeys(t *testing.T) {
+	const (
+		nodeA = int32(10)
+		nodeB = int32(10 + NumShards)
+	)
+
+	pA := pioneerRegister(nodeA)
+	pB := pioneerRegister(nodeB)
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		payload, err, found := herdAwait(context.Background(), nodeA)
+		if !found || err != nil || string(payload) != "payload-A" {
+			t.Errorf("nodeA: got payload=%q found=%v err=%v", payload, found, err)
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		payload, err, found := herdAwait(context.Background(), nodeB)
+		if !found || err != nil || string(payload) != "payload-B" {
+			t.Errorf("nodeB: got payload=%q found=%v err=%v", payload, found, err)
+		}
+	}()
+
+	time.Sleep(10 * time.Millisecond)
+
+	pioneerFulfill(nodeA, pA, []byte("payload-A"), nil)
+	pioneerFulfill(nodeB, pB, []byte("payload-B"), nil)
+
+	wg.Wait()
+}
