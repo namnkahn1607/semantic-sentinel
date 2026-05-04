@@ -10,7 +10,7 @@ import (
 const (
 	numWorkers  = 4
 	jobQueueCap = 5000
-	jobTimeout  = 1 * time.Second
+	jobTimeout  = 50 * time.Millisecond
 )
 
 type Job struct {
